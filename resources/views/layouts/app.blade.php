@@ -21,7 +21,7 @@
             <div class="content">
                 @include('partials.navbar')
 
-                <div class="px-3">
+                <div class="px-0">
                     @if (session('success'))
                         <div class="alert alert-success border-0">
                             {{ session('success') }}

@@ -19,7 +19,7 @@
                 aria-haspopup="true" aria-expanded="false">
                 <div class="avatar avatar-xl">
                     <img class="rounded-circle"
-                        src="{{ Auth::user()->profile_picture ?? asset('assets/img/team/default.jpg') }}"
+                        src="{{ Auth::user()->profile_picture ?? asset('assets/img/team/default-profile.jpg') }}"
                         alt="User Avatar">
                 </div>
             </a>

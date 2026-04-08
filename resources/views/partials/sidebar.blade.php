@@ -10,7 +10,9 @@
         <div class="toggle-icon-wrapper">
             <button class="btn navbar-toggler-humburger-icon navbar-vertical-toggle" data-bs-toggle="tooltip"
                 data-bs-placement="left" title="Toggle Navigation">
-                <span class="navbar-toggle-icon"><span class="toggle-line"></span></span>
+                <span class="navbar-toggle-icon">
+                    <span class="toggle-line"></span>
+                </span>
             </button>
         </div>
 
@@ -27,6 +29,7 @@
         <div class="navbar-vertical-content scrollbar">
             <ul class="navbar-nav flex-column mb-3" id="navbarVerticalNav">
 
+                {{-- DASHBOARD --}}
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
                         href="{{ route('dashboard') }}">
@@ -37,32 +40,43 @@
                     </a>
                 </li>
 
-                <li class="nav-item">
-                    <a class="nav-link" href="#">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-users"></span></span>
-                            <span class="nav-link-text ps-1">Employees</span>
+                {{-- USER MANAGEMENT --}}
+                @canany(['users.view', 'roles.view'])
+                    <li class="nav-item mt-3">
+                        <div class="row navbar-vertical-label-wrapper mb-2">
+                            <div class="col-auto navbar-vertical-label">User Management</div>
+                            <div class="col ps-0">
+                                <hr class="mb-0 navbar-vertical-divider" />
+                            </div>
                         </div>
-                    </a>
-                </li>
+                    </li>
+                @endcanany
 
-                <li class="nav-item">
-                    <a class="nav-link" href="#">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-user-check"></span></span>
-                            <span class="nav-link-text ps-1">Attendance</span>
-                        </div>
-                    </a>
-                </li>
+                {{-- USERS --}}
+                @can('users.view')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}"
+                            href="{{ route('users.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-users"></span></span>
+                                <span class="nav-link-text ps-1">Users</span>
+                            </div>
+                        </a>
+                    </li>
+                @endcan
 
-                <li class="nav-item">
-                    <a class="nav-link" href="#">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-money-check-alt"></span></span>
-                            <span class="nav-link-text ps-1">Payroll</span>
-                        </div>
-                    </a>
-                </li>
+                {{-- ROLES --}}
+                @can('roles.view')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}"
+                            href="{{ route('roles.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-user-shield"></span></span>
+                                <span class="nav-link-text ps-1">Roles & Permissions</span>
+                            </div>
+                        </a>
+                    </li>
+                @endcan
 
             </ul>
         </div>
