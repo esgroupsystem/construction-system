@@ -40,6 +40,63 @@
                     </a>
                 </li>
 
+                {{-- EMPLOYEE MANAGEMENT --}}
+                <li class="nav-item mt-3">
+                    <div class="row navbar-vertical-label-wrapper mb-2">
+                        <div class="col-auto navbar-vertical-label">Employee Management</div>
+                        <div class="col ps-0">
+                            <hr class="mb-0 navbar-vertical-divider" />
+                        </div>
+                    </div>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link dropdown-indicator" href="#employeeMenu" role="button" data-bs-toggle="collapse"
+                        aria-expanded="{{ request()->is('employees*') ? 'true' : 'false' }}"
+                        aria-controls="employeeMenu">
+
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon">
+                                <span class="fas fa-id-badge"></span>
+                            </span>
+                            <span class="nav-link-text ps-1">Employees</span>
+                        </div>
+                    </a>
+
+                    <ul class="nav collapse {{ request()->is('employees*') ? 'show' : '' }}" id="employeeMenu">
+
+                        {{-- EMPLOYEE LIST --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('employees.index') ? 'active' : '' }}"
+                                href="{{ route('employees.index') }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-4">Employee List</span>
+                                </div>
+                            </a>
+                        </li>
+
+                        {{-- FACE REGISTRATION --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->is('face-registration*') ? 'active' : '' }}"
+                                href="#">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-4">Face Registration</span>
+                                </div>
+                            </a>
+                        </li>
+
+                        {{-- ATTENDANCE LOGS --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->is('face-logs*') ? 'active' : '' }}" href="#">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-4">Attendance Logs</span>
+                                </div>
+                            </a>
+                        </li>
+
+                    </ul>
+                </li>
+
                 {{-- USER MANAGEMENT --}}
                 @canany(['users.view', 'roles.view'])
                     <li class="nav-item mt-3">
