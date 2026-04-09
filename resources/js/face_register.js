@@ -1,6 +1,35 @@
 import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 
 /* ----------------------------------------
+ | 🔕 SILENCE MEDIAPIPE LOGS (FIX YOUR ISSUE)
+-----------------------------------------*/
+/* ----------------------------------------
+ 🔕 FORCE REMOVE ALL MEDIAPIPE LOGS (FINAL FIX)
+-----------------------------------------*/
+const ignorePatterns = [
+    "vision_wasm",
+    "FaceLandmarker",
+    "tensorflow",
+    "Graph",
+    "OpenGL",
+    "feedback_manager",
+    "TensorFlow Lite",
+    "gl_context"
+];
+
+function shouldIgnore(msg) {
+    return ignorePatterns.some(p => msg?.toString().includes(p));
+}
+
+['log', 'warn', 'error', 'info', 'debug'].forEach(method => {
+    const original = console[method];
+    console[method] = (...args) => {
+        if (shouldIgnore(args[0])) return;
+        original.apply(console, args);
+    };
+});
+
+/* ----------------------------------------
  | DOM
 -----------------------------------------*/
 const el = {
@@ -31,7 +60,7 @@ let samples = [];
 let lastCaptureTime = 0;
 
 /* ----------------------------------------
- | INIT MEDIAPIPE
+ | INIT MEDIAPIPE (CLEAN VERSION)
 -----------------------------------------*/
 async function initModel() {
     const vision = await FilesetResolver.forVisionTasks(
@@ -45,6 +74,8 @@ async function initModel() {
         },
         runningMode: "VIDEO",
         numFaces: 1,
+        outputFaceBlendshapes: false,
+        outputFacialTransformationMatrixes: false,
     });
 
     el.cameraStatus.textContent = "Ready";
@@ -56,7 +87,13 @@ async function initModel() {
 async function startCamera() {
     if (!faceLandmarker) await initModel();
 
-    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+            facingMode: "user",
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+        },
+    });
 
     el.video.srcObject = stream;
     await el.video.play();
@@ -65,11 +102,12 @@ async function startCamera() {
     el.overlay.height = el.video.videoHeight;
 
     capturing = true;
+    el.status.textContent = "Starting...";
     detectLoop();
 }
 
 /* ----------------------------------------
- | CAPTURE FRAME
+ | CAPTURE FRAME (IMPROVED)
 -----------------------------------------*/
 function captureFrame(landmarks) {
     if (!landmarks || landmarks.length < 50) return;
@@ -103,29 +141,58 @@ function captureFrame(landmarks) {
 }
 
 /* ----------------------------------------
- | DETECTION LOOP
+ | DETECTION LOOP (OPTIMIZED)
 -----------------------------------------*/
+function isFaceCentered(landmarks) {
+    const nose = landmarks[1]; // nose tip
+
+    if (!nose) return false;
+
+    return (
+        nose.x > 0.35 && nose.x < 0.65 &&
+        nose.y > 0.30 && nose.y < 0.70
+    );
+}
+
 function detectLoop() {
     if (!faceLandmarker || el.video.readyState < 2) {
         requestAnimationFrame(detectLoop);
         return;
     }
 
-    const result = faceLandmarker.detectForVideo(el.video, performance.now());
+    const nowPerf = performance.now();
+
+    // 🔥 throttle (fix lag)
+    if (!window.lastDetect) window.lastDetect = 0;
+    if (nowPerf - window.lastDetect < 100) {
+        requestAnimationFrame(detectLoop);
+        return;
+    }
+    window.lastDetect = nowPerf;
+
+    const result = faceLandmarker.detectForVideo(el.video, nowPerf);
 
     if (!result.faceLandmarks?.length) {
-        el.status.textContent = "❌ No face detected";
+        el.status.textContent = "❌ No face";
         return requestAnimationFrame(detectLoop);
     }
 
-    el.status.textContent = "✅ Face detected";
+    const landmarks = result.faceLandmarks[0];
+
+    // 🎯 CENTER CHECK
+    if (!isFaceCentered(landmarks)) {
+        el.status.textContent = "📍 Center your face";
+        return requestAnimationFrame(detectLoop);
+    }
+
+    el.status.textContent = "✅ Hold still...";
 
     if (capturing) {
         const now = Date.now();
 
         if (now - lastCaptureTime > CAPTURE_INTERVAL) {
             lastCaptureTime = now;
-            captureFrame(result.faceLandmarks[0]);
+            captureFrame(landmarks);
         }
     }
 

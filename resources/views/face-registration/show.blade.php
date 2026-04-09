@@ -11,8 +11,8 @@
                         <h4 class="mb-0">Register Face - {{ $employee->full_name }}</h4>
                     </div>
                     <div class="card-body">
-                        <video id="video" autoplay playsinline class="w-100 rounded border"
-                            style="max-height: 420px;"></video>
+                        <video id="video" autoplay playsinline style="width:100%; height:420px; object-fit:cover;">
+                        </video>
                         <canvas id="canvas" class="d-none"></canvas>
 
                         <div class="mt-3 d-flex gap-2 flex-wrap">
@@ -147,4 +147,3 @@
         });
     </script>
 @endsection
-
