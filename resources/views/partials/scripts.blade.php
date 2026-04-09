@@ -6,3 +6,4 @@
 <script src="{{ asset('assets/vendors/lodash/lodash.min.js') }}"></script>
 <script src="{{ asset('assets/vendors/list.js/list.min.js') }}"></script>
 <script src="{{ asset('assets/js/theme.js') }}"></script>
+

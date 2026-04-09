@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\EmployeeFaceRegistrationController;
+use App\Http\Controllers\FaceRecognitionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -99,6 +101,46 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])
         ->middleware('permission:employees.delete')
         ->name('employees.destroy');
+
+    /*----------------------
+     -------- FACE REGISTRATION --------
+    ------------------------*/
+
+    // List employees
+    Route::get('/face-registration', [EmployeeFaceRegistrationController::class, 'index'])
+        ->middleware('permission:employees.view')
+        ->name('face-registration.index');
+
+    // Show registration page
+    Route::get('/face-registration/{employee}', [EmployeeFaceRegistrationController::class, 'show'])
+        ->middleware('permission:employees.update')
+        ->name('face-registration.show');
+
+    // STORE (save face samples)
+    Route::post('/face-registration/{employee}', [EmployeeFaceRegistrationController::class, 'store'])
+        ->middleware('permission:employees.update')
+        ->name('face-registration.store');
+
+    // UPDATE (set primary)
+    Route::put('/face-registration/{employee}/{sample}', [EmployeeFaceRegistrationController::class, 'update'])
+        ->middleware('permission:employees.update')
+        ->name('face-registration.update');
+
+    // DELETE
+    Route::delete('/face-registration/{employee}/{sample}', [EmployeeFaceRegistrationController::class, 'destroy'])
+        ->middleware('permission:employees.update')
+        ->name('face-registration.destroy');
+
+    /*----------------------
+     -------- FACE RECOGNITION --------
+    ------------------------*/
+    Route::get('/face-recognition', [FaceRecognitionController::class, 'index'])
+        ->middleware('permission:employees.view')
+        ->name('face-recognition.index');
+
+    Route::post('/face-recognition/identify', [FaceRecognitionController::class, 'identify'])
+        ->middleware('permission:employees.view')
+        ->name('face-recognition.identify');
 });
 
 require __DIR__.'/auth.php';

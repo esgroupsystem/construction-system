@@ -78,16 +78,26 @@
                         {{-- FACE REGISTRATION --}}
                         <li class="nav-item">
                             <a class="nav-link {{ request()->is('face-registration*') ? 'active' : '' }}"
-                                href="#">
+                                href="{{ route('face-registration.index') }}">
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-text ps-4">Face Registration</span>
                                 </div>
                             </a>
                         </li>
 
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->is('face-recognition*') ? 'active' : '' }}"
+                                href="{{ route('face-recognition.index') }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-4">Face Recognition</span>
+                                </div>
+                            </a>
+                        </li>
+
                         {{-- ATTENDANCE LOGS --}}
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->is('face-logs*') ? 'active' : '' }}" href="#">
+                            <a class="nav-link {{ request()->is('face-logs*') ? 'active' : '' }}"
+                                href="#">
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-text ps-4">Attendance Logs</span>
                                 </div>

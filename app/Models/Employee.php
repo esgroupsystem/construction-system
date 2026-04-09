@@ -2,15 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Employee extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'employee_no',
         'full_name',
@@ -21,10 +18,13 @@ class Employee extends Model
         'face_registered_at',
     ];
 
-    protected $casts = [
-        'is_active' => 'boolean',
-        'face_registered_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+            'face_registered_at' => 'datetime',
+        ];
+    }
 
     public function faceSamples(): HasMany
     {
@@ -35,12 +35,6 @@ class Employee extends Model
 
     public function primaryFaceSample(): HasOne
     {
-        return $this->hasOne(EmployeeFaceSample::class)
-            ->where('is_primary', true);
-    }
-
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
+        return $this->hasOne(EmployeeFaceSample::class)->where('is_primary', true);
     }
 }

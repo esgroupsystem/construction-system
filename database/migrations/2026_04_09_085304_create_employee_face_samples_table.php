@@ -10,12 +10,17 @@ return new class extends Migration
     {
         Schema::create('employee_face_samples', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('employee_id')->constrained()->onDelete('cascade');
+            $table->foreignId('employee_id')->constrained()->cascadeOnDelete();
+
             $table->string('image_path');
-            $table->string('embedding_path')->nullable();
-            $table->timestamp('captured_at')->nullable();
             $table->boolean('is_primary')->default(false);
-            $table->text('notes')->nullable();
+            $table->decimal('face_confidence', 8, 4)->nullable();
+            $table->decimal('yaw', 8, 4)->nullable();
+            $table->decimal('pitch', 8, 4)->nullable();
+            $table->decimal('roll', 8, 4)->nullable();
+            $table->json('landmarks_json')->nullable();
+            $table->timestamp('captured_at')->nullable();
+
             $table->timestamps();
         });
     }

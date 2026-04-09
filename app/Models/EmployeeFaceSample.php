@@ -2,26 +2,33 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EmployeeFaceSample extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'employee_id',
         'image_path',
-        'embedding_path',
-        'captured_at',
         'is_primary',
-        'notes',
+        'face_confidence',
+        'yaw',
+        'pitch',
+        'roll',
+        'landmarks_json',
+        'captured_at',
+        'embedding',
     ];
 
     protected $casts = [
-        'captured_at' => 'datetime',
+        'embedding' => 'array',
         'is_primary' => 'boolean',
+        'landmarks_json' => 'array',
+        'captured_at' => 'datetime',
+        'face_confidence' => 'float',
+        'yaw' => 'float',
+        'pitch' => 'float',
+        'roll' => 'float',
     ];
 
     public function employee(): BelongsTo
