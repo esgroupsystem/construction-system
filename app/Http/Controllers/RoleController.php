@@ -22,8 +22,12 @@ class RoleController extends Controller
 
     public function create()
     {
-        $permissions = Permission::orderBy('name')->get()
-            ->groupBy(fn ($permission) => explode('.', $permission->name)[0]);
+        $permissions = Permission::all()
+            ->unique('name')
+            ->sortBy('name')
+            ->groupBy(function ($permission) {
+                return explode('.', $permission->name)[0]; // module
+            });
 
         return view('roles.create', compact('permissions'));
     }
@@ -53,8 +57,12 @@ class RoleController extends Controller
     {
         $role->load('permissions');
 
-        $permissions = Permission::orderBy('name')->get()
-            ->groupBy(fn ($permission) => explode('.', $permission->name)[0]);
+        $permissions = Permission::all()
+            ->unique('name')
+            ->sortBy('name')
+            ->groupBy(function ($permission) {
+                return explode('.', $permission->name)[0];
+            });
 
         $rolePermissions = $role->permissions->pluck('name')->toArray();
 
