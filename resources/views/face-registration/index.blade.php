@@ -8,75 +8,74 @@
         <div class="row g-4">
 
             {{-- LEFT: CAMERA --}}
-            <div class="col-xl-7">
+            <div class="col-xl-7 d-flex">
 
-                <div class="card border-0 shadow-sm h-100">
+                <div class="card border-0 shadow-sm w-100 d-flex flex-column">
 
                     {{-- HEADER --}}
                     <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
                         <div>
-                            <h4 class="mb-1">Face Registration</h4>
-                            <p class="text-muted mb-0">
-                                <strong>{{ $employee->full_name }}</strong>
+                            <h5 class="mb-1 fw-semibold">Face Registration</h5>
+                            <small class="text-muted">
+                                {{ $employee->full_name }}
                                 @if ($employee->employee_no)
                                     • {{ $employee->employee_no }}
                                 @endif
-                            </p>
+                            </small>
                         </div>
 
-                        <span class="badge bg-info-subtle text-info px-3 py-2" id="cameraStatus">
-                            Initializing...
+                        <span class="badge bg-success-subtle text-success px-3 py-2" id="cameraStatus">
+                            Ready
                         </span>
                     </div>
 
                     {{-- BODY --}}
-                    <div class="card-body">
+                    <div class="card-body d-flex flex-column align-items-center">
 
-                        {{-- CAMERA --}}
-                        <div class="position-relative rounded overflow-hidden bg-dark border">
-                            <video id="video" autoplay playsinline style="width:100%; height:420px; object-fit:cover;">
-                            </video>
+                        {{-- CAMERA CENTERED --}}
+                        <div class="camera-container">
 
-                            <canvas id="overlay" class="position-absolute top-0 start-0 w-100 h-100">
-                            </canvas>
+                            <div class="camera-wrapper">
+
+                                <video id="video" autoplay playsinline></video>
+                                <canvas id="overlay"></canvas>
+
+                                <div class="camera-mask"></div>
+                                <div id="faceGuide"></div>
+                                <div id="countdown"></div>
+                                <div id="flash"></div>
+
+                            </div>
+
                         </div>
 
                         {{-- STATUS --}}
-                        <div class="mt-3">
-
-                            <div class="alert alert-soft-primary border-0 mb-3" id="statusBox">
-                                Position your face in front of the camera.
+                        <div class="text-center mt-3 w-100">
+                            <div class="alert alert-light border mb-2 py-2" id="statusBox">
+                                Align your face inside the oval
                             </div>
 
-                            <div class="d-flex flex-wrap align-items-center gap-2">
+                            {{-- BUTTONS --}}
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
 
-                                <button type="button" class="btn btn-primary" id="startBtn">
+                                <button class="btn btn-primary px-4" id="startBtn">
                                     <i class="fas fa-video me-1"></i> Start
                                 </button>
 
-                                <button type="button" class="btn btn-success" id="saveBtn" disabled>
-                                    <i class="fas fa-save me-1"></i> Save
+                                <button class="btn btn-success px-4" id="saveBtn" disabled>
+                                    Save
                                 </button>
 
-                                <button type="button" class="btn btn-outline-secondary" id="resetBtn">
+                                <button class="btn btn-outline-secondary px-4" id="resetBtn">
                                     Reset
                                 </button>
 
-                                <span class="badge bg-success-subtle text-success px-3 py-2">
-                                    Captured: <span id="captureCount">0</span>/3
-                                </span>
-
                             </div>
 
-                            <div class="small text-muted mt-2">
-                                Auto capture works when your face is centered and stable.
+                            {{-- COUNTER --}}
+                            <div class="mt-2 text-success small fw-semibold">
+                                Captured: <span id="captureCount">0</span>/3
                             </div>
-                        </div>
-
-                        {{-- PREVIEW --}}
-                        <div class="mt-4">
-                            <h6 class="mb-3">Captured Samples</h6>
-                            <div class="row g-3" id="previewGrid"></div>
                         </div>
 
                     </div>
@@ -84,9 +83,8 @@
             </div>
 
             {{-- RIGHT: REGISTERED --}}
-            <div class="col-xl-5">
-
-                <div class="card border-0 shadow-sm h-100">
+            <div class="col-xl-5 d-flex">
+                <div class="card border-0 shadow-sm w-100">
 
                     <div class="card-header bg-white border-0">
                         <h5 class="mb-0">Registered Samples</h5>
@@ -173,8 +171,8 @@
         };
 
         /* ----------------------------------------
-     | DELETE SAMPLE
-    -----------------------------------------*/
+         | DELETE SAMPLE
+        -----------------------------------------*/
         document.addEventListener("click", async (e) => {
             if (e.target.closest(".delete-sample-btn")) {
                 const btn = e.target.closest(".delete-sample-btn");
@@ -233,4 +231,111 @@
             }
         });
     </script>
+
+    <style>
+        /* CAMERA CONTAINER (CENTER + SIZE CONTROL) */
+        .camera-container {
+            width: 100%;
+            max-width: 380px;
+            /* slightly smaller = better UI */
+            margin: auto;
+        }
+
+        /* CAMERA WRAPPER (MAIN FIX) */
+        .camera-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 3 / 4;
+            /* 🔥 KEY FIX: prevents stretching */
+            border-radius: 20px;
+            overflow: hidden;
+            background: black;
+        }
+
+        /* VIDEO + CANVAS */
+        .camera-wrapper video,
+        .camera-wrapper canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-fit: scale-down;
+        }
+
+        /* DARK MASK (FOCUS EFFECT) */
+        .camera-mask {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center,
+                    transparent 120px,
+                    rgba(0, 0, 0, 0.75) 260px);
+        }
+
+        /* FACE OVAL */
+        #faceGuide {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 220px;
+            height: 300px;
+            transform: translate(-50%, -50%);
+            border-radius: 50% / 60%;
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        /* ACTIVE (GREEN) */
+        #faceGuide.active {
+            border-color: #00ff88;
+            box-shadow: 0 0 25px #00ff88;
+        }
+
+        /* COUNTDOWN */
+        #countdown {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            font-weight: bold;
+            color: white;
+            display: none;
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            animation: pop 0.4s ease;
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(0.5) translate(-50%, -50%);
+            }
+
+            100% {
+                transform: scale(1) translate(-50%, -50%);
+            }
+        }
+
+        /* FLASH EFFECT */
+        #flash {
+            position: absolute;
+            inset: 0;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #flash.active {
+            animation: flash 0.3s ease;
+        }
+
+        @keyframes flash {
+            0% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+            }
+        }
+    </style>
 @endsection

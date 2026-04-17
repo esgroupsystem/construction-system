@@ -1,20 +1,12 @@
 import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 
 /* ----------------------------------------
- | 🔕 SILENCE MEDIAPIPE LOGS (FIX YOUR ISSUE)
------------------------------------------*/
-/* ----------------------------------------
- 🔕 FORCE REMOVE ALL MEDIAPIPE LOGS (FINAL FIX)
+ | 🔕 SILENCE MEDIAPIPE LOGS
 -----------------------------------------*/
 const ignorePatterns = [
-    "vision_wasm",
-    "FaceLandmarker",
-    "tensorflow",
-    "Graph",
-    "OpenGL",
-    "feedback_manager",
-    "TensorFlow Lite",
-    "gl_context"
+    "vision_wasm", "FaceLandmarker", "tensorflow",
+    "Graph", "OpenGL", "feedback_manager",
+    "TensorFlow Lite", "gl_context"
 ];
 
 function shouldIgnore(msg) {
@@ -43,12 +35,15 @@ const el = {
     cameraStatus: document.getElementById("cameraStatus"),
 };
 
+const faceGuide = document.getElementById("faceGuide");
+const countdownEl = document.getElementById("countdown");
+const flash = document.getElementById("flash");
+
 /* ----------------------------------------
  | CONFIG
 -----------------------------------------*/
 const config = window.faceRegisterConfig || {};
 const REQUIRED_SAMPLES = config.requiredSamples || 3;
-const CAPTURE_INTERVAL = 1200;
 
 /* ----------------------------------------
  | STATE
@@ -57,10 +52,13 @@ let faceLandmarker = null;
 let stream = null;
 let capturing = false;
 let samples = [];
-let lastCaptureTime = 0;
+
+let isCountingDown = false;
+let lastFaceCenter = null;
+let stableFrames = 0;
 
 /* ----------------------------------------
- | INIT MEDIAPIPE (CLEAN VERSION)
+ | INIT MODEL
 -----------------------------------------*/
 async function initModel() {
     const vision = await FilesetResolver.forVisionTasks(
@@ -74,8 +72,6 @@ async function initModel() {
         },
         runningMode: "VIDEO",
         numFaces: 1,
-        outputFaceBlendshapes: false,
-        outputFacialTransformationMatrixes: false,
     });
 
     el.cameraStatus.textContent = "Ready";
@@ -88,11 +84,7 @@ async function startCamera() {
     if (!faceLandmarker) await initModel();
 
     stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-            facingMode: "user",
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-        },
+        video: { facingMode: "user", width: 640, height: 480 },
     });
 
     el.video.srcObject = stream;
@@ -102,24 +94,34 @@ async function startCamera() {
     el.overlay.height = el.video.videoHeight;
 
     capturing = true;
-    el.status.textContent = "Starting...";
+    el.status.textContent = "📷 Align your face inside the oval";
     detectLoop();
 }
 
 /* ----------------------------------------
- | CAPTURE FRAME (IMPROVED)
+ | FACE METRICS
+-----------------------------------------*/
+function getFaceMetrics(landmarks) {
+    let minX = 1, maxX = 0, minY = 1, maxY = 0;
+
+    landmarks.forEach(p => {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+    });
+
+    return {
+        centerX: (minX + maxX) / 2,
+        centerY: (minY + maxY) / 2,
+        width: maxX - minX
+    };
+}
+
+/* ----------------------------------------
+ | CAPTURE FRAME
 -----------------------------------------*/
 function captureFrame(landmarks) {
-    if (!landmarks || landmarks.length < 50) return;
-
-    const embedding = landmarks.flatMap(p => [
-        Number(p.x || 0),
-        Number(p.y || 0),
-        Number(p.z || 0),
-    ]);
-
-    if (embedding.length < 300) return;
-
     const canvas = document.createElement("canvas");
     canvas.width = el.video.videoWidth;
     canvas.height = el.video.videoHeight;
@@ -128,7 +130,7 @@ function captureFrame(landmarks) {
 
     samples.push({
         image: canvas.toDataURL("image/jpeg", 0.9),
-        embedding,
+        embedding: landmarks.flatMap(p => [p.x, p.y, p.z]),
     });
 
     el.count.textContent = samples.length;
@@ -141,61 +143,90 @@ function captureFrame(landmarks) {
 }
 
 /* ----------------------------------------
- | DETECTION LOOP (OPTIMIZED)
+ | COUNTDOWN + CAPTURE
 -----------------------------------------*/
-function isFaceCentered(landmarks) {
-    const nose = landmarks[1]; // nose tip
+async function startCountdownAndCapture(landmarks) {
+    if (isCountingDown) return;
 
-    if (!nose) return false;
+    isCountingDown = true;
+    countdownEl.style.display = "block";
 
-    return (
-        nose.x > 0.35 && nose.x < 0.65 &&
-        nose.y > 0.30 && nose.y < 0.70
-    );
+    for (let i = 3; i >= 1; i--) {
+        countdownEl.textContent = i;
+        await new Promise(r => setTimeout(r, 600));
+    }
+
+    countdownEl.style.display = "none";
+
+    // FLASH
+    flash.classList.add("active");
+    setTimeout(() => flash.classList.remove("active"), 300);
+
+    captureFrame(landmarks);
+
+    isCountingDown = false;
 }
 
+/* ----------------------------------------
+ | DETECTION LOOP
+-----------------------------------------*/
 function detectLoop() {
     if (!faceLandmarker || el.video.readyState < 2) {
         requestAnimationFrame(detectLoop);
         return;
     }
 
-    const nowPerf = performance.now();
-
-    // 🔥 throttle (fix lag)
-    if (!window.lastDetect) window.lastDetect = 0;
-    if (nowPerf - window.lastDetect < 100) {
-        requestAnimationFrame(detectLoop);
-        return;
-    }
-    window.lastDetect = nowPerf;
-
-    const result = faceLandmarker.detectForVideo(el.video, nowPerf);
+    const now = performance.now();
+    const result = faceLandmarker.detectForVideo(el.video, now);
 
     if (!result.faceLandmarks?.length) {
-        el.status.textContent = "❌ No face";
+        el.status.textContent = "❌ No face detected";
+        faceGuide.classList.remove("active");
         return requestAnimationFrame(detectLoop);
     }
 
     const landmarks = result.faceLandmarks[0];
+    const { centerX, centerY, width } = getFaceMetrics(landmarks);
 
-    // 🎯 CENTER CHECK
-    if (!isFaceCentered(landmarks)) {
-        el.status.textContent = "📍 Center your face";
-        return requestAnimationFrame(detectLoop);
+    // POSITION
+    if (centerX < 0.3) return update("➡️ Move right");
+    if (centerX > 0.7) return update("⬅️ Move left");
+    if (centerY < 0.3) return update("⬇️ Move down");
+    if (centerY > 0.7) return update("⬆️ Move up");
+
+    // DISTANCE
+    if (width < 0.15) return update("🔍 Move closer");
+    if (width > 0.45) return update("📏 Move back");
+
+    // STABILITY
+    const current = [centerX, centerY];
+
+    if (lastFaceCenter &&
+        Math.abs(current[0] - lastFaceCenter[0]) < 0.01 &&
+        Math.abs(current[1] - lastFaceCenter[1]) < 0.01) {
+        stableFrames++;
+    } else {
+        stableFrames = 0;
     }
 
-    el.status.textContent = "✅ Hold still...";
+    lastFaceCenter = current;
 
-    if (capturing) {
-        const now = Date.now();
+    if (stableFrames < 8) return update("🧍 Hold still...");
 
-        if (now - lastCaptureTime > CAPTURE_INTERVAL) {
-            lastCaptureTime = now;
-            captureFrame(landmarks);
-        }
+    // PERFECT
+    faceGuide.classList.add("active");
+    el.status.textContent = "✅ Perfect! Capturing...";
+
+    if (capturing && samples.length < REQUIRED_SAMPLES) {
+        startCountdownAndCapture(landmarks);
     }
 
+    requestAnimationFrame(detectLoop);
+}
+
+function update(msg) {
+    el.status.textContent = msg;
+    faceGuide.classList.remove("active");
     requestAnimationFrame(detectLoop);
 }
 
@@ -225,7 +256,6 @@ async function saveSamples() {
         alert("Saved successfully");
         location.reload();
     } catch (err) {
-        console.error(err);
         alert(err.message || "Save failed");
     }
 }
