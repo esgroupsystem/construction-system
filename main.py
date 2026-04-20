@@ -8,7 +8,7 @@ from insightface.app import FaceAnalysis
 app = FastAPI()
 
 # Load InsightFace model
-face_app = FaceAnalysis(name="buffalo_l")
+face_app = FaceAnalysis(name="buffalo_s")
 face_app.prepare(ctx_id=-1)  # CPU
 
 
@@ -118,7 +118,7 @@ def register_face(data: RegisterRequest):
                 "roll": float(face.pose[2]) if face.pose is not None else 0.0,
                 "landmarks": face.kps.tolist() if face.kps is not None else [],
                 "model_name": "insightface",
-                "model_version": "buffalo_l"
+                "model_version": "buffalo_s"
             })
 
         except Exception as e:
