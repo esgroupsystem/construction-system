@@ -42,6 +42,19 @@ class PermissionSeeder extends Seeder
             'face-registration.create',
             'face-registration.update',
             'face-registration.delete',
+
+            'employees.view',
+            'employees.create',
+            'employees.update',
+            'employees.delete',
+
+            'face-recognition.view',
+            'attendance-logs.view',
+
+            'employee-dashboard.view',
+            'my-attendance.view',
+            'my-attendance.time-in',
+            'my-attendance.time-out',
         ];
 
         foreach ($permissions as $permission) {

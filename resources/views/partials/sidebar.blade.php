@@ -30,82 +30,101 @@
             <ul class="navbar-nav flex-column mb-3" id="navbarVerticalNav">
 
                 {{-- DASHBOARD --}}
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
-                        href="{{ route('dashboard') }}">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-chart-pie"></span></span>
-                            <span class="nav-link-text ps-1">Dashboard</span>
-                        </div>
-                    </a>
-                </li>
+                @can('my-attendance.view')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('employee.dashboard') ? 'active' : '' }}"
+                            href="{{ route('employee.dashboard') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-camera"></span></span>
+                                <span class="nav-link-text ps-1">My Attendance</span>
+                            </div>
+                        </a>
+                    </li>
+                @endcan
+
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+                            href="{{ route('dashboard') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-chart-pie"></span></span>
+                                <span class="nav-link-text ps-1">Dashboard</span>
+                            </div>
+                        </a>
+                    </li>
 
                 {{-- EMPLOYEE MANAGEMENT --}}
-                <li class="nav-item mt-3">
-                    <div class="row navbar-vertical-label-wrapper mb-2">
-                        <div class="col-auto navbar-vertical-label">Employee Management</div>
-                        <div class="col ps-0">
-                            <hr class="mb-0 navbar-vertical-divider" />
+                @canany(['employees.view', 'face-registration.view', 'face-recognition.view', 'attendance-logs.view'])
+                    <li class="nav-item mt-3">
+                        <div class="row navbar-vertical-label-wrapper mb-2">
+                            <div class="col-auto navbar-vertical-label">Employee Management</div>
+                            <div class="col ps-0">
+                                <hr class="mb-0 navbar-vertical-divider" />
+                            </div>
                         </div>
-                    </div>
-                </li>
+                    </li>
 
-                <li class="nav-item">
-                    <a class="nav-link dropdown-indicator" href="#employeeMenu" role="button" data-bs-toggle="collapse"
-                        aria-expanded="{{ request()->is('employees*') ? 'true' : 'false' }}"
-                        aria-controls="employeeMenu">
+                    <li class="nav-item">
+                        <a class="nav-link dropdown-indicator" href="#employeeMenu" role="button" data-bs-toggle="collapse"
+                            aria-expanded="{{ request()->is('employees*') || request()->is('face-registration*') || request()->is('face-recognition*') ? 'true' : 'false' }}"
+                            aria-controls="employeeMenu">
 
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon">
-                                <span class="fas fa-id-badge"></span>
-                            </span>
-                            <span class="nav-link-text ps-1">Employees</span>
-                        </div>
-                    </a>
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon">
+                                    <span class="fas fa-id-badge"></span>
+                                </span>
+                                <span class="nav-link-text ps-1">Employees</span>
+                            </div>
+                        </a>
 
-                    <ul class="nav collapse {{ request()->is('employees*') ? 'show' : '' }}" id="employeeMenu">
+                        <ul class="nav collapse {{ request()->is('employees*') || request()->is('face-registration*') || request()->is('face-recognition*') ? 'show' : '' }}"
+                            id="employeeMenu">
 
-                        {{-- EMPLOYEE LIST --}}
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('employees.index') ? 'active' : '' }}"
-                                href="{{ route('employees.index') }}">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-text ps-4">Employee List</span>
-                                </div>
-                            </a>
-                        </li>
+                            @can('employees.view')
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('employees.index') ? 'active' : '' }}"
+                                        href="{{ route('employees.index') }}">
+                                        <div class="d-flex align-items-center">
+                                            <span class="nav-link-text ps-4">Employee List</span>
+                                        </div>
+                                    </a>
+                                </li>
+                            @endcan
 
-                        {{-- FACE REGISTRATION --}}
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->is('face-registration*') ? 'active' : '' }}"
-                                href="{{ route('face-registration.index') }}">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-text ps-4">Face Registration</span>
-                                </div>
-                            </a>
-                        </li>
+                            @can('face-registration.view')
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->is('face-registration*') ? 'active' : '' }}"
+                                        href="{{ route('face-registration.index') }}">
+                                        <div class="d-flex align-items-center">
+                                            <span class="nav-link-text ps-4">Face Registration</span>
+                                        </div>
+                                    </a>
+                                </li>
+                            @endcan
 
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->is('face-recognition*') ? 'active' : '' }}"
-                                href="{{ route('face-recognition.index') }}">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-text ps-4">Face Recognition</span>
-                                </div>
-                            </a>
-                        </li>
+                            @can('face-recognition.view')
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->is('face-recognition*') ? 'active' : '' }}"
+                                        href="{{ route('face-recognition.index') }}">
+                                        <div class="d-flex align-items-center">
+                                            <span class="nav-link-text ps-4">Face Recognition</span>
+                                        </div>
+                                    </a>
+                                </li>
+                            @endcan
 
-                        {{-- ATTENDANCE LOGS --}}
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->is('face-logs*') ? 'active' : '' }}"
-                                href="#">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-text ps-4">Attendance Logs</span>
-                                </div>
-                            </a>
-                        </li>
+                            @can('attendance-logs.view')
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->is('attendance-logs*') ? 'active' : '' }}" href="#">
+                                        <div class="d-flex align-items-center">
+                                            <span class="nav-link-text ps-4">Attendance Logs</span>
+                                        </div>
+                                    </a>
+                                </li>
+                            @endcan
 
-                    </ul>
-                </li>
+                        </ul>
+                    </li>
+                @endcanany
 
                 {{-- USER MANAGEMENT --}}
                 @canany(['users.view', 'roles.view'])
@@ -119,7 +138,6 @@
                     </li>
                 @endcanany
 
-                {{-- USERS --}}
                 @can('users.view')
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}"
@@ -132,7 +150,6 @@
                     </li>
                 @endcan
 
-                {{-- ROLES --}}
                 @can('roles.view')
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}"

@@ -22,7 +22,7 @@
                         </div>
                         <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
                             @can('users.create')
-                                <a href="#" class="btn btn-primary">
+                                <a href="{{ route('users.create') }}" class="btn btn-primary">
                                     <i class="fas fa-user-plus me-1"></i> Add User
                                 </a>
                             @endcan

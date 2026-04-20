@@ -1,11 +1,12 @@
 <?php
 
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\EmployeeController;
-use App\Http\Controllers\EmployeeFaceRegistrationController;
 use App\Http\Controllers\FaceRecognitionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\FaceRegistrationController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -16,6 +17,19 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', function () {
         return view('dashboard.index');
     })->name('dashboard');
+
+    /*----------------------
+     -------- ATTENDANCE --------
+    ------------------------*/
+
+    Route::get('/employee/dashboard', [AttendanceController::class, 'index'])
+        ->name('employee.dashboard');
+
+    Route::post('/attendance/time-in', [AttendanceController::class, 'timeIn'])
+        ->name('attendance.time-in');
+
+    Route::post('/attendance/time-out', [AttendanceController::class, 'timeOut'])
+        ->name('attendance.time-out');
 
     /*----------------------
      -------- USERS --------
@@ -106,28 +120,27 @@ Route::middleware(['auth'])->group(function () {
      -------- FACE REGISTRATION --------
     ------------------------*/
 
-    // List employees
-    Route::get('/face-registration', [EmployeeFaceRegistrationController::class, 'index'])
+    Route::get('/face-registration', [FaceRegistrationController::class, 'index'])
         ->middleware('permission:employees.view')
         ->name('face-registration.index');
 
     // Show registration page
-    Route::get('/face-registration/{employee}', [EmployeeFaceRegistrationController::class, 'show'])
+    Route::get('/face-registration/{employee}', [FaceRegistrationController::class, 'show'])
         ->middleware('permission:employees.update')
         ->name('face-registration.show');
 
-    // STORE (save face samples)
-    Route::post('/face-registration/{employee}', [EmployeeFaceRegistrationController::class, 'store'])
+    // STORE (save face samples / embeddings)
+    Route::post('/face-registration/{employee}', [FaceRegistrationController::class, 'store'])
         ->middleware('permission:employees.update')
         ->name('face-registration.store');
 
     // UPDATE (set primary)
-    Route::put('/face-registration/{employee}/{sample}', [EmployeeFaceRegistrationController::class, 'update'])
+    Route::put('/face-registration/{employee}/{sample}', [FaceRegistrationController::class, 'update'])
         ->middleware('permission:employees.update')
         ->name('face-registration.update');
 
     // DELETE
-    Route::delete('/face-registration/{employee}/{sample}', [EmployeeFaceRegistrationController::class, 'destroy'])
+    Route::delete('/face-registration/{employee}/{sample}', [FaceRegistrationController::class, 'destroy'])
         ->middleware('permission:employees.update')
         ->name('face-registration.destroy');
 
@@ -141,6 +154,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/face-recognition/identify', [FaceRecognitionController::class, 'identify'])
         ->middleware('permission:employees.view')
         ->name('face-recognition.identify');
+
 });
 
 require __DIR__.'/auth.php';

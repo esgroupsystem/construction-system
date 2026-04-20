@@ -16,25 +16,29 @@ class Employee extends Model
         'photo_path',
         'is_active',
         'face_registered_at',
+        'face_samples_count',
     ];
 
-    protected function casts(): array
+    protected $casts = [
+        'is_active' => 'boolean',
+        'face_registered_at' => 'datetime',
+    ];
+
+    public function user(): HasOne
     {
-        return [
-            'is_active' => 'boolean',
-            'face_registered_at' => 'datetime',
-        ];
+        return $this->hasOne(User::class);
     }
 
-    public function faceSamples(): HasMany
+    public function faceEmbeddings(): HasMany
     {
-        return $this->hasMany(EmployeeFaceSample::class)
+        return $this->hasMany(EmployeeFaceEmbedding::class)
             ->orderByDesc('is_primary')
             ->latest('captured_at');
     }
 
-    public function primaryFaceSample(): HasOne
+    public function primaryFaceEmbedding(): HasOne
     {
-        return $this->hasOne(EmployeeFaceSample::class)->where('is_primary', true);
+        return $this->hasOne(EmployeeFaceEmbedding::class)
+            ->where('is_primary', true);
     }
 }

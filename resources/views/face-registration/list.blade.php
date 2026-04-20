@@ -38,21 +38,27 @@
                                 {{ $employee->full_name }}
                             </h6>
 
-                            <div class="text-muted small mb-2">
+                            <div class="text-muted small mb-1">
                                 {{ $employee->employee_no }}
                             </div>
 
-                            <div class="text-muted small mb-3">
+                            <div class="text-muted small mb-2">
                                 {{ $employee->department ?? 'No Department' }}
                             </div>
 
+                            {{-- SAMPLE COUNT --}}
+                            <div class="small mb-2">
+                                Samples:
+                                <strong>{{ $employee->face_samples_count ?? 0 }}</strong>
+                            </div>
+
                             {{-- STATUS --}}
-                            @if ($employee->face_registered_at)
-                                <span class="badge bg-success-subtle text-success px-3 py-2">
+                            @if ($employee->face_registered_at && ($employee->face_samples_count ?? 0) > 0)
+                                <span class="badge bg-success px-3 py-2">
                                     <i class="fas fa-check-circle me-1"></i> Registered
                                 </span>
                             @else
-                                <span class="badge bg-warning-subtle text-warning px-3 py-2">
+                                <span class="badge bg-warning px-3 py-2">
                                     <i class="fas fa-exclamation-circle me-1"></i> Not Registered
                                 </span>
                             @endif
@@ -64,7 +70,7 @@
 
                             <a href="{{ route('face-registration.show', $employee) }}" class="btn btn-primary btn-sm w-100">
                                 <i class="fas fa-camera me-1"></i>
-                                Open Registration
+                                {{ $employee->face_samples_count ? 'Update Face' : 'Register Face' }}
                             </a>
 
                         </div>
@@ -88,5 +94,11 @@
             @endforelse
 
         </div>
+
+        {{-- PAGINATION --}}
+        <div class="mt-4">
+            {{ $employees->links() }}
+        </div>
+
     </div>
 @endsection

@@ -5,30 +5,29 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class EmployeeFaceSample extends Model
+class EmployeeFaceEmbedding extends Model
 {
     protected $fillable = [
         'employee_id',
         'image_path',
         'is_primary',
-        'face_confidence',
+        'model_name',
+        'model_version',
+        'det_score',
+        'quality_score',
         'yaw',
         'pitch',
         'roll',
         'landmarks_json',
+        'embedding_json',
         'captured_at',
-        'embedding',
     ];
 
     protected $casts = [
-        'embedding' => 'array',
         'is_primary' => 'boolean',
         'landmarks_json' => 'array',
+        'embedding_json' => 'array',
         'captured_at' => 'datetime',
-        'face_confidence' => 'float',
-        'yaw' => 'float',
-        'pitch' => 'float',
-        'roll' => 'float',
     ];
 
     public function employee(): BelongsTo

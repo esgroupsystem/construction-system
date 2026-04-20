@@ -1,274 +1,367 @@
-import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+const config = window.faceRegisterConfig;
 
-/* ----------------------------------------
- | 🔕 SILENCE MEDIAPIPE LOGS
------------------------------------------*/
-const ignorePatterns = [
-    "vision_wasm", "FaceLandmarker", "tensorflow",
-    "Graph", "OpenGL", "feedback_manager",
-    "TensorFlow Lite", "gl_context"
-];
+const video = document.getElementById('video');
+const overlay = document.getElementById('overlay');
+const statusBox = document.getElementById('statusBox');
+const cameraStatus = document.getElementById('cameraStatus');
+const startBtn = document.getElementById('startBtn');
+const captureBtn = document.getElementById('captureBtn');
+const resetBtn = document.getElementById('resetBtn');
+const captureCount = document.getElementById('captureCount');
+const faceGuide = document.getElementById('faceGuide');
+const faceDetectedBadge = document.getElementById('faceDetectedBadge');
 
-function shouldIgnore(msg) {
-    return ignorePatterns.some(p => msg?.toString().includes(p));
-}
-
-['log', 'warn', 'error', 'info', 'debug'].forEach(method => {
-    const original = console[method];
-    console[method] = (...args) => {
-        if (shouldIgnore(args[0])) return;
-        original.apply(console, args);
-    };
-});
-
-/* ----------------------------------------
- | DOM
------------------------------------------*/
-const el = {
-    video: document.getElementById("video"),
-    overlay: document.getElementById("overlay"),
-    startBtn: document.getElementById("startBtn"),
-    saveBtn: document.getElementById("saveBtn"),
-    resetBtn: document.getElementById("resetBtn"),
-    status: document.getElementById("statusBox"),
-    count: document.getElementById("captureCount"),
-    cameraStatus: document.getElementById("cameraStatus"),
-};
-
-const faceGuide = document.getElementById("faceGuide");
-const countdownEl = document.getElementById("countdown");
-const flash = document.getElementById("flash");
-
-/* ----------------------------------------
- | CONFIG
------------------------------------------*/
-const config = window.faceRegisterConfig || {};
-const REQUIRED_SAMPLES = config.requiredSamples || 3;
-
-/* ----------------------------------------
- | STATE
------------------------------------------*/
-let faceLandmarker = null;
 let stream = null;
-let capturing = false;
-let samples = [];
+let capturedFrames = [];
+let faceDetector = null;
+let detectLoopId = null;
+let lastDetection = null;
+let isCapturing = false;
+let supportsFaceDetection = false;
 
-let isCountingDown = false;
-let lastFaceCenter = null;
-let stableFrames = 0;
-
-/* ----------------------------------------
- | INIT MODEL
------------------------------------------*/
-async function initModel() {
-    const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-    );
-
-    faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
-        baseOptions: {
-            modelAssetPath:
-                "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
-        },
-        runningMode: "VIDEO",
-        numFaces: 1,
-    });
-
-    el.cameraStatus.textContent = "Ready";
+function setStatus(message, type = 'secondary') {
+    statusBox.className = `alert alert-${type} border mb-0 status-panel`;
+    statusBox.textContent = message;
 }
 
-/* ----------------------------------------
- | CAMERA START
------------------------------------------*/
-async function startCamera() {
-    if (!faceLandmarker) await initModel();
-
-    stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: 640, height: 480 },
-    });
-
-    el.video.srcObject = stream;
-    await el.video.play();
-
-    el.overlay.width = el.video.videoWidth;
-    el.overlay.height = el.video.videoHeight;
-
-    capturing = true;
-    el.status.textContent = "📷 Align your face inside the oval";
-    detectLoop();
+function updateCount() {
+    captureCount.textContent = capturedFrames.length;
 }
 
-/* ----------------------------------------
- | FACE METRICS
------------------------------------------*/
-function getFaceMetrics(landmarks) {
-    let minX = 1, maxX = 0, minY = 1, maxY = 0;
-
-    landmarks.forEach(p => {
-        if (p.x < minX) minX = p.x;
-        if (p.x > maxX) maxX = p.x;
-        if (p.y < minY) minY = p.y;
-        if (p.y > maxY) maxY = p.y;
-    });
-
-    return {
-        centerX: (minX + maxX) / 2,
-        centerY: (minY + maxY) / 2,
-        width: maxX - minX
-    };
+function setCameraBadge(text, typeClass) {
+    cameraStatus.textContent = text;
+    cameraStatus.className = `badge rounded-pill px-3 py-2 ${typeClass}`;
 }
 
-/* ----------------------------------------
- | CAPTURE FRAME
------------------------------------------*/
-function captureFrame(landmarks) {
-    const canvas = document.createElement("canvas");
-    canvas.width = el.video.videoWidth;
-    canvas.height = el.video.videoHeight;
+function setFaceDetectedState(detected, message = '') {
+    if (!faceDetectedBadge) return;
 
-    canvas.getContext("2d").drawImage(el.video, 0, 0);
-
-    samples.push({
-        image: canvas.toDataURL("image/jpeg", 0.9),
-        embedding: landmarks.flatMap(p => [p.x, p.y, p.z]),
-    });
-
-    el.count.textContent = samples.length;
-
-    if (samples.length >= REQUIRED_SAMPLES) {
-        capturing = false;
-        el.status.textContent = "✅ Ready to save";
-        el.saveBtn.disabled = false;
-    }
-}
-
-/* ----------------------------------------
- | COUNTDOWN + CAPTURE
------------------------------------------*/
-async function startCountdownAndCapture(landmarks) {
-    if (isCountingDown) return;
-
-    isCountingDown = true;
-    countdownEl.style.display = "block";
-
-    for (let i = 3; i >= 1; i--) {
-        countdownEl.textContent = i;
-        await new Promise(r => setTimeout(r, 600));
-    }
-
-    countdownEl.style.display = "none";
-
-    // FLASH
-    flash.classList.add("active");
-    setTimeout(() => flash.classList.remove("active"), 300);
-
-    captureFrame(landmarks);
-
-    isCountingDown = false;
-}
-
-/* ----------------------------------------
- | DETECTION LOOP
------------------------------------------*/
-function detectLoop() {
-    if (!faceLandmarker || el.video.readyState < 2) {
-        requestAnimationFrame(detectLoop);
-        return;
-    }
-
-    const now = performance.now();
-    const result = faceLandmarker.detectForVideo(el.video, now);
-
-    if (!result.faceLandmarks?.length) {
-        el.status.textContent = "❌ No face detected";
-        faceGuide.classList.remove("active");
-        return requestAnimationFrame(detectLoop);
-    }
-
-    const landmarks = result.faceLandmarks[0];
-    const { centerX, centerY, width } = getFaceMetrics(landmarks);
-
-    // POSITION
-    if (centerX < 0.3) return update("➡️ Move right");
-    if (centerX > 0.7) return update("⬅️ Move left");
-    if (centerY < 0.3) return update("⬇️ Move down");
-    if (centerY > 0.7) return update("⬆️ Move up");
-
-    // DISTANCE
-    if (width < 0.15) return update("🔍 Move closer");
-    if (width > 0.45) return update("📏 Move back");
-
-    // STABILITY
-    const current = [centerX, centerY];
-
-    if (lastFaceCenter &&
-        Math.abs(current[0] - lastFaceCenter[0]) < 0.01 &&
-        Math.abs(current[1] - lastFaceCenter[1]) < 0.01) {
-        stableFrames++;
+    if (detected) {
+        faceDetectedBadge.textContent = message || 'Face detected';
+        faceDetectedBadge.className = 'badge rounded-pill bg-success-subtle text-success border';
+        faceGuide?.classList.add('active');
+        faceGuide?.classList.remove('warning');
     } else {
-        stableFrames = 0;
+        faceDetectedBadge.textContent = message || 'No face detected';
+        faceDetectedBadge.className = 'badge rounded-pill bg-light text-dark border';
+        faceGuide?.classList.remove('active');
     }
-
-    lastFaceCenter = current;
-
-    if (stableFrames < 8) return update("🧍 Hold still...");
-
-    // PERFECT
-    faceGuide.classList.add("active");
-    el.status.textContent = "✅ Perfect! Capturing...";
-
-    if (capturing && samples.length < REQUIRED_SAMPLES) {
-        startCountdownAndCapture(landmarks);
-    }
-
-    requestAnimationFrame(detectLoop);
 }
 
-function update(msg) {
-    el.status.textContent = msg;
-    faceGuide.classList.remove("active");
-    requestAnimationFrame(detectLoop);
+function setWarningState(message = 'Adjust face position') {
+    if (!faceDetectedBadge) return;
+    faceDetectedBadge.textContent = message;
+    faceDetectedBadge.className = 'badge rounded-pill bg-warning-subtle text-warning border';
+    faceGuide?.classList.add('warning');
+    faceGuide?.classList.remove('active');
 }
 
-/* ----------------------------------------
- | SAVE
------------------------------------------*/
-async function saveSamples() {
-    if (samples.length < REQUIRED_SAMPLES) {
-        return alert("Capture more samples first.");
+function clearOverlay() {
+    if (!overlay) return;
+    const ctx = overlay.getContext('2d');
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+}
+
+function syncOverlaySize() {
+    if (!overlay || !video.videoWidth || !video.videoHeight) return;
+    overlay.width = video.videoWidth;
+    overlay.height = video.videoHeight;
+}
+
+function drawDetectionBox(face) {
+    if (!overlay || !face?.boundingBox) return;
+
+    syncOverlaySize();
+    const ctx = overlay.getContext('2d');
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+    const { x, y, width, height } = face.boundingBox;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#22c55e';
+    ctx.strokeRect(x, y, width, height);
+}
+
+function captureFrame() {
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    return canvas.toDataURL('image/jpeg', 0.9);
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function initFaceDetector() {
+    if ('FaceDetector' in window) {
+        try {
+            faceDetector = new FaceDetector({
+                fastMode: true,
+                maxDetectedFaces: 1
+            });
+            supportsFaceDetection = true;
+            return true;
+        } catch (error) {
+            console.warn('FaceDetector init failed:', error);
+        }
+    }
+
+    supportsFaceDetection = false;
+    return false;
+}
+
+function isFaceCentered(face) {
+    if (!face?.boundingBox || !video.videoWidth || !video.videoHeight) {
+        return false;
+    }
+
+    const { x, y, width, height } = face.boundingBox;
+
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+
+    const videoCenterX = video.videoWidth / 2;
+    const videoCenterY = video.videoHeight / 2;
+
+    const offsetX = Math.abs(centerX - videoCenterX);
+    const offsetY = Math.abs(centerY - videoCenterY);
+
+    const faceLargeEnough = width > video.videoWidth * 0.18 && height > video.videoHeight * 0.18;
+    const centeredEnough = offsetX < video.videoWidth * 0.16 && offsetY < video.videoHeight * 0.18;
+
+    return faceLargeEnough && centeredEnough;
+}
+
+async function detectFaceOnce() {
+    if (!supportsFaceDetection || !faceDetector || !video.videoWidth || !video.videoHeight) {
+        return { detected: true, centered: true, face: null, fallback: true };
     }
 
     try {
-        const res = await fetch(config.postUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": config.csrfToken,
-                Accept: "application/json",
-            },
-            body: JSON.stringify({ samples }),
-        });
+        syncOverlaySize();
+        const faces = await faceDetector.detect(video);
 
-        const data = await res.json();
+        if (!faces || faces.length === 0) {
+            clearOverlay();
+            return { detected: false, centered: false, face: null };
+        }
 
-        if (!res.ok) throw new Error(data.message);
+        const face = faces[0];
+        drawDetectionBox(face);
 
-        alert("Saved successfully");
-        location.reload();
-    } catch (err) {
-        alert(err.message || "Save failed");
+        return {
+            detected: true,
+            centered: isFaceCentered(face),
+            face
+        };
+    } catch (error) {
+        console.warn('Face detection failed:', error);
+        return { detected: false, centered: false, face: null };
     }
 }
 
-/* ----------------------------------------
- | EVENTS
------------------------------------------*/
-el.startBtn?.addEventListener("click", startCamera);
-el.saveBtn?.addEventListener("click", saveSamples);
-el.resetBtn?.addEventListener("click", () => {
-    samples = [];
-    el.count.textContent = 0;
-    el.saveBtn.disabled = true;
-    capturing = true;
-    el.status.textContent = "Reset complete";
-});
+async function startDetectionLoop() {
+    stopDetectionLoop();
+
+    const loop = async () => {
+        if (!stream || video.readyState < 2) {
+            detectLoopId = requestAnimationFrame(loop);
+            return;
+        }
+
+        const result = await detectFaceOnce();
+        lastDetection = result;
+
+        if (result.fallback) {
+            setFaceDetectedState(true, 'Face check unavailable');
+            captureBtn.disabled = false;
+        } else if (!result.detected) {
+            setFaceDetectedState(false, 'No face detected');
+            captureBtn.disabled = true;
+            setCameraBadge('Waiting Face', 'bg-warning text-dark');
+        } else if (!result.centered) {
+            setWarningState('Center face in guide');
+            captureBtn.disabled = true;
+            setCameraBadge('Align Face', 'bg-warning text-dark');
+        } else {
+            setFaceDetectedState(true, 'Face ready');
+            captureBtn.disabled = false;
+            setCameraBadge('Ready', 'bg-success');
+        }
+
+        detectLoopId = requestAnimationFrame(loop);
+    };
+
+    detectLoopId = requestAnimationFrame(loop);
+}
+
+function stopDetectionLoop() {
+    if (detectLoopId) {
+        cancelAnimationFrame(detectLoopId);
+        detectLoopId = null;
+    }
+}
+
+async function startCamera() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: 'user',
+                width: { ideal: 720 },
+                height: { ideal: 960 }
+            },
+            audio: false
+        });
+
+        video.srcObject = stream;
+        await video.play();
+
+        initFaceDetector();
+        startDetectionLoop();
+
+        setCameraBadge('Camera On', 'bg-info text-dark');
+        setStatus(
+            supportsFaceDetection
+                ? 'Camera started. Place one face inside the guide until status changes to Ready.'
+                : 'Camera started. Face detection is not supported in this browser, so capture stays manual.',
+            supportsFaceDetection ? 'info' : 'warning'
+        );
+    } catch (error) {
+        console.error(error);
+        setCameraBadge('Camera Error', 'bg-danger');
+        setStatus('Unable to access camera.', 'danger');
+    }
+}
+
+function stopCamera() {
+    stopDetectionLoop();
+    clearOverlay();
+
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+
+    video.srcObject = null;
+    captureBtn.disabled = true;
+    setCameraBadge('Idle', 'bg-secondary');
+    setFaceDetectedState(false, 'No face detected');
+    faceGuide?.classList.remove('active', 'warning');
+    lastDetection = null;
+}
+
+async function captureSamples() {
+    if (isCapturing) return;
+
+    if (!video.srcObject) {
+        setStatus('Please start the camera first.', 'warning');
+        return;
+    }
+
+    if (supportsFaceDetection) {
+        const currentCheck = await detectFaceOnce();
+
+        if (!currentCheck.detected) {
+            setStatus('No face detected. Please face the camera first.', 'warning');
+            return;
+        }
+
+        if (!currentCheck.centered) {
+            setStatus('Face detected, but not aligned well. Center it inside the guide.', 'warning');
+            return;
+        }
+    }
+
+    isCapturing = true;
+    captureBtn.disabled = true;
+    capturedFrames = [];
+    updateCount();
+
+    setCameraBadge('Capturing', 'bg-primary');
+    setStatus('Capturing samples. Keep your face steady and look at the camera.', 'primary');
+
+    try {
+        const totalSamples = config.requiredSamples || 10;
+
+        for (let i = 0; i < totalSamples; i++) {
+            if (supportsFaceDetection) {
+                const check = await detectFaceOnce();
+
+                if (!check.detected || !check.centered) {
+                    isCapturing = false;
+                    setStatus('Capture stopped because the face moved out of position. Please try again.', 'warning');
+                    setCameraBadge('Retry Needed', 'bg-warning text-dark');
+                    return;
+                }
+            }
+
+            capturedFrames.push(captureFrame());
+            updateCount();
+            await sleep(350);
+        }
+
+        setCameraBadge('Uploading', 'bg-info text-dark');
+        setStatus('Uploading samples...', 'info');
+
+        const response = await fetch(config.postUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': config.csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                frames: capturedFrames
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            console.error('Request failed:', result);
+            throw new Error(result.message || 'Registration failed.');
+        }
+
+        if (!result.success) {
+            throw new Error(result.message || 'Registration failed.');
+        }
+
+        setCameraBadge('Saved', 'bg-success');
+        setStatus(result.message || 'Face registration completed.', 'success');
+
+        setTimeout(() => {
+            window.location.href = result.redirect || window.location.href;
+        }, 1200);
+    } catch (error) {
+        console.error(error);
+        setCameraBadge('Error', 'bg-danger');
+        setStatus(error.message || 'Registration failed.', 'danger');
+    } finally {
+        isCapturing = false;
+        if (stream) {
+            startDetectionLoop();
+        }
+    }
+}
+
+function resetCapture() {
+    capturedFrames = [];
+    updateCount();
+    setStatus('Capture reset. Re-align the face and capture again.', 'secondary');
+    if (stream) {
+        setCameraBadge('Camera On', 'bg-info text-dark');
+    } else {
+        setCameraBadge('Idle', 'bg-secondary');
+    }
+}
+
+startBtn?.addEventListener('click', startCamera);
+captureBtn?.addEventListener('click', captureSamples);
+resetBtn?.addEventListener('click', resetCapture);
+
+window.addEventListener('beforeunload', stopCamera);
+window.addEventListener('resize', syncOverlaySize);

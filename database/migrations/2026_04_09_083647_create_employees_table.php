@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('employees', function (Blueprint $table) {
@@ -18,15 +15,18 @@ return new class extends Migration
             $table->string('department')->nullable();
             $table->string('position')->nullable();
             $table->string('photo_path')->nullable();
+
             $table->boolean('is_active')->default(true);
+
             $table->timestamp('face_registered_at')->nullable();
+            $table->unsignedInteger('face_samples_count')->default(0);
+
             $table->timestamps();
+
+            $table->index(['is_active', 'employee_no']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('employees');
