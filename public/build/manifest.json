@@ -1,0 +1,29 @@
+{
+  "resources/css/app.css": {
+    "file": "assets/app-WGUZNAiy.css",
+    "src": "resources/css/app.css",
+    "isEntry": true,
+    "name": "app",
+    "names": [
+      "app.css"
+    ]
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-Due1s3iS.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/attendance_verify.js": {
+    "file": "assets/attendance_verify-DHWeYpsF.js",
+    "name": "attendance_verify",
+    "src": "resources/js/attendance_verify.js",
+    "isEntry": true
+  },
+  "resources/js/face_register.js": {
+    "file": "assets/face_register-CaJiiCl1.js",
+    "name": "face_register",
+    "src": "resources/js/face_register.js",
+    "isEntry": true
+  }
+}
