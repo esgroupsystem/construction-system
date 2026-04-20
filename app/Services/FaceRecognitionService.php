@@ -8,8 +8,10 @@ class FaceRecognitionService
 {
     public function registerEmployee($employee, array $frames): array
     {
-        $response = Http::timeout(60)
-            ->acceptJson()
+        $response = Http::acceptJson()
+            ->connectTimeout(15)
+            ->timeout((int) config('services.face_api.timeout', 120))
+            ->retry(1, 1000)
             ->post(config('services.face_api.base_url').'/register-face', [
                 'employee_id' => $employee->id,
                 'employee_no' => $employee->employee_no,
@@ -35,8 +37,10 @@ class FaceRecognitionService
         float $threshold = 0.58,
         int $minMatchedFrames = 4
     ): array {
-        $response = Http::timeout(60)
-            ->acceptJson()
+        $response = Http::acceptJson()
+            ->connectTimeout(15)
+            ->timeout((int) config('services.face_api.timeout', 120))
+            ->retry(1, 1000)
             ->post(config('services.face_api.base_url').'/verify-employee-face', [
                 'employee_id' => $employeeId,
                 'frames' => $frames,

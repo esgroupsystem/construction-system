@@ -15,7 +15,6 @@ let stream = null;
 let capturedFrames = [];
 let faceDetector = null;
 let detectLoopId = null;
-let lastDetection = null;
 let isCapturing = false;
 let supportsFaceDetection = false;
 
@@ -83,13 +82,17 @@ function drawDetectionBox(face) {
 
 function captureFrame() {
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+
+    const maxWidth = 480;
+    const scale = Math.min(1, maxWidth / video.videoWidth);
+
+    canvas.width = Math.floor(video.videoWidth * scale);
+    canvas.height = Math.floor(video.videoHeight * scale);
 
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    return canvas.toDataURL('image/jpeg', 0.9);
+    return canvas.toDataURL('image/jpeg', 0.7);
 }
 
 function sleep(ms) {
@@ -174,7 +177,6 @@ async function startDetectionLoop() {
         }
 
         const result = await detectFaceOnce();
-        lastDetection = result;
 
         if (result.fallback) {
             setFaceDetectedState(true, 'Face check unavailable');
@@ -211,8 +213,8 @@ async function startCamera() {
         stream = await navigator.mediaDevices.getUserMedia({
             video: {
                 facingMode: 'user',
-                width: { ideal: 720 },
-                height: { ideal: 960 }
+                width: { ideal: 640 },
+                height: { ideal: 800 }
             },
             audio: false
         });
@@ -251,7 +253,6 @@ function stopCamera() {
     setCameraBadge('Idle', 'bg-secondary');
     setFaceDetectedState(false, 'No face detected');
     faceGuide?.classList.remove('active', 'warning');
-    lastDetection = null;
 }
 
 async function captureSamples() {
@@ -285,7 +286,7 @@ async function captureSamples() {
     setStatus('Capturing samples. Keep your face steady and look at the camera.', 'primary');
 
     try {
-        const totalSamples = config.requiredSamples || 10;
+        const totalSamples = config.requiredSamples || 4;
 
         for (let i = 0; i < totalSamples; i++) {
             if (supportsFaceDetection) {
@@ -301,7 +302,7 @@ async function captureSamples() {
 
             capturedFrames.push(captureFrame());
             updateCount();
-            await sleep(350);
+            await sleep(300);
         }
 
         setCameraBadge('Uploading', 'bg-info text-dark');
@@ -319,7 +320,12 @@ async function captureSamples() {
             })
         });
 
-        const result = await response.json();
+        let result = {};
+        try {
+            result = await response.json();
+        } catch (e) {
+            throw new Error('Invalid server response.');
+        }
 
         if (!response.ok) {
             console.error('Request failed:', result);

@@ -34,9 +34,10 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-
+    
     'face_api' => [
-        'base_url' => env('FACE_API_URL', 'http://127.0.0.1:8001'),
+        'base_url' => rtrim(env('FACE_API_URL', 'http://127.0.0.1:8001'), '/'),
+        'timeout' => env('FACE_API_TIMEOUT', 120),
     ],
 
 ];
