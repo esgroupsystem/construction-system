@@ -1,3 +1,4 @@
+cat > config/services.php <<'PHP'
 <?php
 
 return [
@@ -41,3 +42,4 @@ return [
     ],
 
 ];
+PHP
