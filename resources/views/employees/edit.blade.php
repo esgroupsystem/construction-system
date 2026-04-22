@@ -6,7 +6,6 @@
     <div class="container-fluid px-0" data-layout="container">
         <div class="content">
 
-            {{-- HEADER --}}
             <div class="card mb-4">
                 <div class="bg-holder d-none d-lg-block bg-card"
                     style="background-image:url({{ asset('assets/img/icons/spot-illustrations/corner-4.png') }});">
@@ -27,13 +26,11 @@
                 </div>
             </div>
 
-            {{-- FORM --}}
             <form action="{{ route('employees.update', $employee) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
 
                 <div class="card border-0 shadow-sm">
-
                     <div class="card-header bg-body-tertiary border-bottom py-3">
                         <h5 class="mb-0">Employee Information</h5>
                     </div>
@@ -63,6 +60,63 @@
                                 <label class="form-label">Position</label>
                                 <input type="text" name="position" class="form-control"
                                     value="{{ old('position', $employee->position) }}">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Rate / Salary</label>
+                                <input type="number" step="0.01" min="0" name="rate_salary" class="form-control"
+                                    value="{{ old('rate_salary', $employee->rate_salary) }}" placeholder="e.g. 15000.00">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Location / Assignment</label>
+                                <input type="text" name="location" class="form-control"
+                                    value="{{ old('location', $employee->location) }}"
+                                    placeholder="e.g. Main Office / Site A">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Schedule Time In</label>
+                                <input type="time" name="schedule_time_in" class="form-control"
+                                    value="{{ old('schedule_time_in', $employee->schedule_time_in ? \Carbon\Carbon::parse($employee->schedule_time_in)->format('H:i') : '') }}">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Schedule Time Out</label>
+                                <input type="time" name="schedule_time_out" class="form-control"
+                                    value="{{ old('schedule_time_out', $employee->schedule_time_out ? \Carbon\Carbon::parse($employee->schedule_time_out)->format('H:i') : '') }}">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label d-block">Day Offs</label>
+                                <div class="row g-2">
+                                    @php
+                                        $days = [
+                                            'Monday',
+                                            'Tuesday',
+                                            'Wednesday',
+                                            'Thursday',
+                                            'Friday',
+                                            'Saturday',
+                                            'Sunday',
+                                        ];
+                                        $selectedDayOffs = old('day_offs', $employee->day_offs ?? []);
+                                    @endphp
+
+                                    @foreach ($days as $day)
+                                        <div class="col-md-3 col-sm-4 col-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="day_offs[]"
+                                                    value="{{ $day }}" id="day_{{ $day }}"
+                                                    {{ in_array($day, $selectedDayOffs) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="day_{{ $day }}">
+                                                    {{ $day }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <small class="text-muted">Select employee permanent day off(s).</small>
                             </div>
 
                             <div class="col-md-6">
@@ -97,7 +151,6 @@
                             <i class="fas fa-save me-1"></i> Update Employee
                         </button>
                     </div>
-
                 </div>
             </form>
         </div>

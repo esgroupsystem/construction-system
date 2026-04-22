@@ -42,15 +42,15 @@
                     </li>
                 @endcan
 
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
-                            href="{{ route('dashboard') }}">
-                            <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-chart-pie"></span></span>
-                                <span class="nav-link-text ps-1">Dashboard</span>
-                            </div>
-                        </a>
-                    </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+                        href="{{ route('dashboard') }}">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-chart-pie"></span></span>
+                            <span class="nav-link-text ps-1">Dashboard</span>
+                        </div>
+                    </a>
+                </li>
 
                 {{-- EMPLOYEE MANAGEMENT --}}
                 @canany(['employees.view', 'face-registration.view', 'face-recognition.view', 'attendance-logs.view'])
@@ -101,20 +101,10 @@
                                 </li>
                             @endcan
 
-                            @can('face-recognition.view')
-                                <li class="nav-item">
-                                    <a class="nav-link {{ request()->is('face-recognition*') ? 'active' : '' }}"
-                                        href="{{ route('face-recognition.index') }}">
-                                        <div class="d-flex align-items-center">
-                                            <span class="nav-link-text ps-4">Face Recognition</span>
-                                        </div>
-                                    </a>
-                                </li>
-                            @endcan
-
                             @can('attendance-logs.view')
                                 <li class="nav-item">
-                                    <a class="nav-link {{ request()->is('attendance-logs*') ? 'active' : '' }}" href="#">
+                                    <a class="nav-link {{ request()->is('attendance-logs*') ? 'active' : '' }}"
+                                        href="{{ route('attendance-logs.index') }}">
                                         <div class="d-flex align-items-center">
                                             <span class="nav-link-text ps-4">Attendance Logs</span>
                                         </div>

@@ -19,7 +19,8 @@ class EmployeeController extends Controller
                     $q->where('employee_no', 'like', "%{$search}%")
                         ->orWhere('full_name', 'like', "%{$search}%")
                         ->orWhere('department', 'like', "%{$search}%")
-                        ->orWhere('position', 'like', "%{$search}%");
+                        ->orWhere('position', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%");
                 });
             })
             ->latest()
@@ -41,6 +42,12 @@ class EmployeeController extends Controller
             'full_name' => ['required', 'string', 'max:255'],
             'department' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'string', 'max:255'],
+            'rate_salary' => ['nullable', 'numeric', 'min:0'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'schedule_time_in' => ['nullable', 'date_format:H:i'],
+            'schedule_time_out' => ['nullable', 'date_format:H:i', 'after:schedule_time_in'],
+            'day_offs' => ['nullable', 'array'],
+            'day_offs.*' => ['in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'],
             'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
@@ -56,6 +63,11 @@ class EmployeeController extends Controller
                 'full_name' => $validated['full_name'],
                 'department' => $validated['department'] ?? null,
                 'position' => $validated['position'] ?? null,
+                'rate_salary' => $validated['rate_salary'] ?? null,
+                'location' => $validated['location'] ?? null,
+                'schedule_time_in' => $validated['schedule_time_in'] ?? null,
+                'schedule_time_out' => $validated['schedule_time_out'] ?? null,
+                'day_offs' => $validated['day_offs'] ?? [],
                 'photo_path' => $photoPath,
                 'is_active' => $request->boolean('is_active'),
                 'face_registered_at' => null,
@@ -92,6 +104,12 @@ class EmployeeController extends Controller
             'full_name' => ['required', 'string', 'max:255'],
             'department' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'string', 'max:255'],
+            'rate_salary' => ['nullable', 'numeric', 'min:0'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'schedule_time_in' => ['nullable', 'date_format:H:i'],
+            'schedule_time_out' => ['nullable', 'date_format:H:i', 'after:schedule_time_in'],
+            'day_offs' => ['nullable', 'array'],
+            'day_offs.*' => ['in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'],
             'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
@@ -111,6 +129,11 @@ class EmployeeController extends Controller
                 'full_name' => $validated['full_name'],
                 'department' => $validated['department'] ?? null,
                 'position' => $validated['position'] ?? null,
+                'rate_salary' => $validated['rate_salary'] ?? null,
+                'location' => $validated['location'] ?? null,
+                'schedule_time_in' => $validated['schedule_time_in'] ?? null,
+                'schedule_time_out' => $validated['schedule_time_out'] ?? null,
+                'day_offs' => $validated['day_offs'] ?? [],
                 'photo_path' => $photoPath,
                 'is_active' => $request->boolean('is_active'),
             ]);

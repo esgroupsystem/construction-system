@@ -391,11 +391,19 @@ function refreshAttendanceBox(data) {
         <div class="mb-3">
             <label class="form-label text-muted small">Time In</label>
             <div class="fw-semibold">${attendance.time_in ?? 'Not yet'}</div>
+            <div class="small text-muted">
+                Method: ${attendance.time_in_method ?? '-'} |
+                Confidence: ${attendance.time_in_confidence ?? '-'}
+            </div>
         </div>
 
         <div class="mb-0">
             <label class="form-label text-muted small">Time Out</label>
             <div class="fw-semibold">${attendance.time_out ?? 'Not yet'}</div>
+            <div class="small text-muted">
+                Method: ${attendance.time_out_method ?? '-'} |
+                Confidence: ${attendance.time_out_confidence ?? '-'}
+            </div>
         </div>
     `;
 }

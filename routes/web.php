@@ -2,11 +2,10 @@
 
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\EmployeeController;
-use App\Http\Controllers\FaceRecognitionController;
+use App\Http\Controllers\FaceRegistrationController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\FaceRegistrationController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -30,6 +29,13 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/attendance/time-out', [AttendanceController::class, 'timeOut'])
         ->name('attendance.time-out');
+        
+    /*----------------------
+    -------- ATTENDANCE LOGS --------
+    ------------------------*/
+    Route::get('/attendance-logs', [AttendanceController::class, 'logs'])
+        ->middleware('permission:attendance-logs.view')
+        ->name('attendance-logs.index');
 
     /*----------------------
      -------- USERS --------
@@ -143,17 +149,6 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/face-registration/{employee}/{sample}', [FaceRegistrationController::class, 'destroy'])
         ->middleware('permission:employees.update')
         ->name('face-registration.destroy');
-
-    /*----------------------
-     -------- FACE RECOGNITION --------
-    ------------------------*/
-    Route::get('/face-recognition', [FaceRecognitionController::class, 'index'])
-        ->middleware('permission:employees.view')
-        ->name('face-recognition.index');
-
-    Route::post('/face-recognition/identify', [FaceRecognitionController::class, 'identify'])
-        ->middleware('permission:employees.view')
-        ->name('face-recognition.identify');
 
 });
 

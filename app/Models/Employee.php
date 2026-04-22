@@ -13,6 +13,11 @@ class Employee extends Model
         'full_name',
         'department',
         'position',
+        'rate_salary',
+        'location',
+        'schedule_time_in',
+        'schedule_time_out',
+        'day_offs',
         'photo_path',
         'is_active',
         'face_registered_at',
@@ -22,6 +27,10 @@ class Employee extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'face_registered_at' => 'datetime',
+        'rate_salary' => 'decimal:2',
+        'schedule_time_in' => 'datetime:H:i',
+        'schedule_time_out' => 'datetime:H:i',
+        'day_offs' => 'array',
     ];
 
     public function user(): HasOne

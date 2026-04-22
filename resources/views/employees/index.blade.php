@@ -61,6 +61,8 @@
                                     <th>EMPLOYEE NO</th>
                                     <th>DEPARTMENT</th>
                                     <th>POSITION</th>
+                                    <th>LOCATION</th>
+                                    <th>SCHEDULE</th>
                                     <th>STATUS</th>
                                     <th class="text-end pe-3">ACTION</th>
                                 </tr>
@@ -84,7 +86,9 @@
                                                 </div>
                                                 <div>
                                                     <h6 class="mb-0">{{ $emp->full_name }}</h6>
-                                                    <div class="fs--2 text-600">Employee Profile</div>
+                                                    <div class="fs--2 text-600">
+                                                        {{ $emp->rate_salary !== null ? 'Salary: ' . number_format($emp->rate_salary, 2) : 'Employee Profile' }}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -92,9 +96,20 @@
                                         <td>{{ $emp->employee_no }}</td>
                                         <td>{{ $emp->department ?? '-' }}</td>
                                         <td>{{ $emp->position ?? '-' }}</td>
+                                        <td>{{ $emp->location ?? '-' }}</td>
 
                                         <td>
-                                            <span class="badge bg-{{ $emp->is_active ? 'success' : 'secondary' }} px-3 py-2">
+                                            @if ($emp->schedule_time_in && $emp->schedule_time_out)
+                                                {{ \Carbon\Carbon::parse($emp->schedule_time_in)->format('h:i A') }} -
+                                                {{ \Carbon\Carbon::parse($emp->schedule_time_out)->format('h:i A') }}
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
+
+                                        <td>
+                                            <span
+                                                class="badge bg-{{ $emp->is_active ? 'success' : 'secondary' }} px-3 py-2">
                                                 {{ $emp->is_active ? 'Active' : 'Inactive' }}
                                             </span>
                                         </td>
@@ -112,7 +127,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center py-5">
+                                        <td colspan="8" class="text-center py-5">
                                             <h6 class="text-600">No employees found</h6>
                                         </td>
                                     </tr>

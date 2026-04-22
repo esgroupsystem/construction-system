@@ -28,6 +28,33 @@ class AttendanceController extends Controller
         return view('employees.dashboard', compact('employee', 'todayAttendance'));
     }
 
+    public function logs(Request $request)
+    {
+        $search = trim((string) $request->input('search'));
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
+
+        $attendanceLogs = Attendance::with('employee')
+            ->when($search, function ($query) use ($search) {
+                $query->whereHas('employee', function ($q) use ($search) {
+                    $q->where('full_name', 'like', "%{$search}%")
+                        ->orWhere('employee_no', 'like', "%{$search}%");
+                });
+            })
+            ->when($dateFrom, function ($query) use ($dateFrom) {
+                $query->whereDate('attendance_date', '>=', $dateFrom);
+            })
+            ->when($dateTo, function ($query) use ($dateTo) {
+                $query->whereDate('attendance_date', '<=', $dateTo);
+            })
+            ->latest('attendance_date')
+            ->latest('time_in')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('attendance-logs.index', compact('attendanceLogs', 'search', 'dateFrom', 'dateTo'));
+    }
+
     public function timeIn(Request $request, FaceRecognitionService $faceRecognitionService)
     {
         return $this->handleAttendance($request, $faceRecognitionService, 'time_in');
@@ -89,7 +116,7 @@ class AttendanceController extends Controller
             employeeId: $employee->id,
             frames: $request->frames,
             registeredEmbeddings: $registeredEmbeddings,
-            threshold: 0.85,
+            threshold: 0.70,
             minMatchedFrames: 4
         );
 
@@ -99,12 +126,13 @@ class AttendanceController extends Controller
                 'message' => $verification['message'] ?? 'Verification failed.',
                 'confidence' => $verification['confidence'] ?? null,
                 'matched_frames' => $verification['matched_frames'] ?? 0,
-                'quality_score' => $request->input('quality_score'),
+                'quality_score' => $verification['quality_score'] ?? $request->input('quality_score'),
             ], 422);
         }
 
         $now = now();
         $today = $now->toDateString();
+        $confidence = isset($verification['confidence']) ? (float) $verification['confidence'] : null;
 
         DB::beginTransaction();
 
@@ -117,6 +145,10 @@ class AttendanceController extends Controller
                 [
                     'time_in' => null,
                     'time_out' => null,
+                    'time_in_method' => null,
+                    'time_out_method' => null,
+                    'time_in_confidence' => null,
+                    'time_out_confidence' => null,
                 ]
             );
 
@@ -134,6 +166,8 @@ class AttendanceController extends Controller
                 }
 
                 $attendance->time_in = $now;
+                $attendance->time_in_method = 'face';
+                $attendance->time_in_confidence = $confidence;
             }
 
             if ($type === 'time_out') {
@@ -162,6 +196,8 @@ class AttendanceController extends Controller
                 }
 
                 $attendance->time_out = $now;
+                $attendance->time_out_method = 'face';
+                $attendance->time_out_confidence = $confidence;
             }
 
             $attendance->save();
@@ -177,6 +213,7 @@ class AttendanceController extends Controller
                 'confidence' => $verification['confidence'] ?? null,
                 'matched_frames' => $verification['matched_frames'] ?? 0,
                 'quality_score' => $verification['quality_score'] ?? $request->input('quality_score'),
+                'method' => 'face',
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -195,6 +232,14 @@ class AttendanceController extends Controller
             'date' => Carbon::parse($attendance->attendance_date)->format('F d, Y'),
             'time_in' => $attendance->time_in ? Carbon::parse($attendance->time_in)->format('h:i:s A') : 'Not yet',
             'time_out' => $attendance->time_out ? Carbon::parse($attendance->time_out)->format('h:i:s A') : 'Not yet',
+            'time_in_method' => $attendance->time_in_method ?? '-',
+            'time_out_method' => $attendance->time_out_method ?? '-',
+            'time_in_confidence' => ! is_null($attendance->time_in_confidence)
+                ? number_format((float) $attendance->time_in_confidence * 100, 2).'%'
+                : '-',
+            'time_out_confidence' => ! is_null($attendance->time_out_confidence)
+                ? number_format((float) $attendance->time_out_confidence * 100, 2).'%'
+                : '-',
         ];
     }
 }
