@@ -173,13 +173,15 @@ class FaceRegistrationController extends Controller
         }
     }
 
-    public function update(Employee $employee, EmployeeFaceEmbedding $sample)
+    public function update(Employee $employee, $sample)
     {
-        if ($sample->employee_id !== $employee->id) {
+        $sample = $employee->faceEmbeddings()->whereKey($sample)->first();
+
+        if (! $sample) {
             return response()->json([
                 'success' => false,
-                'message' => 'Sample does not belong to this employee.',
-            ], 403);
+                'message' => 'Sample not found for this employee.',
+            ], 404);
         }
 
         DB::transaction(function () use ($employee, $sample) {
@@ -193,13 +195,15 @@ class FaceRegistrationController extends Controller
         ]);
     }
 
-    public function destroy(Employee $employee, EmployeeFaceEmbedding $sample)
+    public function destroy(Employee $employee, $sample)
     {
-        if ($sample->employee_id !== $employee->id) {
+        $sample = $employee->faceEmbeddings()->whereKey($sample)->first();
+
+        if (! $sample) {
             return response()->json([
                 'success' => false,
-                'message' => 'Sample does not belong to this employee.',
-            ], 403);
+                'message' => 'Sample not found for this employee.',
+            ], 404);
         }
 
         DB::transaction(function () use ($employee, $sample) {
@@ -212,7 +216,7 @@ class FaceRegistrationController extends Controller
             $sample->delete();
 
             if ($wasPrimary) {
-                $nextPrimary = EmployeeFaceEmbedding::where('employee_id', $employee->id)
+                $nextPrimary = $employee->faceEmbeddings()
                     ->latest('captured_at')
                     ->first();
 
@@ -221,7 +225,7 @@ class FaceRegistrationController extends Controller
                 }
             }
 
-            $remainingCount = EmployeeFaceEmbedding::where('employee_id', $employee->id)->count();
+            $remainingCount = $employee->faceEmbeddings()->count();
 
             $employee->update([
                 'face_samples_count' => $remainingCount,
