@@ -82,8 +82,11 @@
                                 <tr>
                                     <th class="ps-3">EMPLOYEE</th>
                                     <th>DATE</th>
+                                    <th>SCHEDULE</th>
                                     <th>TIME IN</th>
                                     <th>TIME OUT</th>
+                                    <th>SUMMARY</th>
+                                    <th>WORKED</th>
                                     <th>IN METHOD</th>
                                     <th>OUT METHOD</th>
                                     <th>IN CONF.</th>
@@ -108,6 +111,18 @@
                                         </td>
 
                                         <td>
+                                            @if ($log->employee && $log->employee->schedule_time_in && $log->employee->schedule_time_out)
+                                                <div class="fw-semibold">
+                                                    {{ \Carbon\Carbon::parse($log->employee->schedule_time_in)->format('h:i A') }}
+                                                    -
+                                                    {{ \Carbon\Carbon::parse($log->employee->schedule_time_out)->format('h:i A') }}
+                                                </div>
+                                            @else
+                                                <span class="text-muted">No schedule</span>
+                                            @endif
+                                        </td>
+
+                                        <td>
                                             @if ($log->time_in)
                                                 <span class="badge bg-soft-success text-success">
                                                     {{ \Carbon\Carbon::parse($log->time_in)->format('h:i A') }}
@@ -125,6 +140,18 @@
                                             @else
                                                 <span class="text-muted">-</span>
                                             @endif
+                                        </td>
+
+                                        <td>
+                                            <span class="badge bg-{{ $log->attendance_summary_class }}">
+                                                {{ $log->attendance_summary_text }}
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            <span class="fw-semibold">
+                                                {{ $log->worked_text }}
+                                            </span>
                                         </td>
 
                                         <td>
@@ -165,7 +192,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center py-5">
+                                        <td colspan="13" class="text-center py-5">
                                             <h6 class="text-600 mb-1">No attendance records found</h6>
                                             <p class="text-muted mb-0">Try adjusting your filters or wait for attendance
                                                 entries.</p>

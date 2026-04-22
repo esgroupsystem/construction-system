@@ -14,6 +14,7 @@ class Employee extends Model
         'department',
         'position',
         'rate_salary',
+        'payroll_type',
         'location',
         'schedule_time_in',
         'schedule_time_out',
@@ -28,8 +29,6 @@ class Employee extends Model
         'is_active' => 'boolean',
         'face_registered_at' => 'datetime',
         'rate_salary' => 'decimal:2',
-        'schedule_time_in' => 'datetime:H:i',
-        'schedule_time_out' => 'datetime:H:i',
         'day_offs' => 'array',
     ];
 

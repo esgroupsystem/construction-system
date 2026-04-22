@@ -94,6 +94,13 @@
                                 </div>
 
                                 <div class="col-md-6">
+                                    <label class="text-600 fs--1">Payroll Type</label>
+                                    <div class="fw-semibold">
+                                        {{ ucfirst($employee->payroll_type ?? '-') }}
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
                                     <label class="text-600 fs--1">Location</label>
                                     <div class="fw-semibold">{{ $employee->location ?? '-' }}</div>
                                 </div>

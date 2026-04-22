@@ -49,6 +49,7 @@ class EmployeeController extends Controller
             'day_offs' => ['nullable', 'array'],
             'day_offs.*' => ['in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'],
             'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'payroll_type' => ['required', 'in:weekly,monthly'],
         ]);
 
         try {
@@ -71,6 +72,7 @@ class EmployeeController extends Controller
                 'photo_path' => $photoPath,
                 'is_active' => $request->boolean('is_active'),
                 'face_registered_at' => null,
+                'payroll_type' => $validated['payroll_type'],
             ]);
 
             return redirect()
@@ -111,6 +113,7 @@ class EmployeeController extends Controller
             'day_offs' => ['nullable', 'array'],
             'day_offs.*' => ['in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'],
             'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'payroll_type' => ['required', 'in:weekly,monthly'],
         ]);
 
         try {
@@ -136,6 +139,7 @@ class EmployeeController extends Controller
                 'day_offs' => $validated['day_offs'] ?? [],
                 'photo_path' => $photoPath,
                 'is_active' => $request->boolean('is_active'),
+                'payroll_type' => $validated['payroll_type'],
             ]);
 
             return redirect()

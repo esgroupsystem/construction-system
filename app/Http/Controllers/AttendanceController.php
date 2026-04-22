@@ -34,7 +34,9 @@ class AttendanceController extends Controller
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
 
-        $attendanceLogs = Attendance::with('employee')
+        $attendanceLogs = Attendance::with([
+            'employee:id,employee_no,full_name,schedule_time_in,schedule_time_out',
+        ])
             ->when($search, function ($query) use ($search) {
                 $query->whereHas('employee', function ($q) use ($search) {
                     $q->where('full_name', 'like', "%{$search}%")

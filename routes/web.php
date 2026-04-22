@@ -20,18 +20,20 @@ Route::middleware(['auth'])->group(function () {
     /*----------------------
      -------- ATTENDANCE --------
     ------------------------*/
-
     Route::get('/employee/dashboard', [AttendanceController::class, 'index'])
+        ->middleware('permission:employee-dashboard.view')
         ->name('employee.dashboard');
 
     Route::post('/attendance/time-in', [AttendanceController::class, 'timeIn'])
+        ->middleware('permission:attendance.time-in')
         ->name('attendance.time-in');
 
     Route::post('/attendance/time-out', [AttendanceController::class, 'timeOut'])
+        ->middleware('permission:attendance.time-out')
         ->name('attendance.time-out');
-        
+
     /*----------------------
-    -------- ATTENDANCE LOGS --------
+     -------- ATTENDANCE LOGS --------
     ------------------------*/
     Route::get('/attendance-logs', [AttendanceController::class, 'logs'])
         ->middleware('permission:attendance-logs.view')
@@ -125,31 +127,25 @@ Route::middleware(['auth'])->group(function () {
     /*----------------------
      -------- FACE REGISTRATION --------
     ------------------------*/
-
     Route::get('/face-registration', [FaceRegistrationController::class, 'index'])
-        ->middleware('permission:employees.view')
+        ->middleware('permission:face-registration.view')
         ->name('face-registration.index');
 
-    // Show registration page
     Route::get('/face-registration/{employee}', [FaceRegistrationController::class, 'show'])
-        ->middleware('permission:employees.update')
+        ->middleware('permission:face-registration.update')
         ->name('face-registration.show');
 
-    // STORE (save face samples / embeddings)
     Route::post('/face-registration/{employee}', [FaceRegistrationController::class, 'store'])
-        ->middleware('permission:employees.update')
+        ->middleware('permission:face-registration.update')
         ->name('face-registration.store');
 
-    // UPDATE (set primary)
     Route::put('/face-registration/{employee}/{sample}', [FaceRegistrationController::class, 'update'])
-        ->middleware('permission:employees.update')
+        ->middleware('permission:face-registration.update')
         ->name('face-registration.update');
 
-    // DELETE
     Route::delete('/face-registration/{employee}/{sample}', [FaceRegistrationController::class, 'destroy'])
-        ->middleware('permission:employees.update')
+        ->middleware('permission:face-registration.update')
         ->name('face-registration.destroy');
-
 });
 
 require __DIR__.'/auth.php';

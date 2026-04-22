@@ -67,9 +67,14 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Location / Assignment</label>
-                                <input type="text" name="location" class="form-control" value="{{ old('location') }}"
-                                    placeholder="e.g. Main Office / Site A">
+                                <label class="form-label">Payroll Type</label>
+                                <select name="payroll_type" class="form-select" required>
+                                    <option value="monthly"
+                                        {{ old('payroll_type', 'monthly') === 'monthly' ? 'selected' : '' }}>Monthly
+                                    </option>
+                                    <option value="weekly" {{ old('payroll_type') === 'weekly' ? 'selected' : '' }}>Weekly
+                                    </option>
+                                </select>
                             </div>
 
                             <div class="col-md-6">
@@ -82,6 +87,12 @@
                                 <label class="form-label">Schedule Time Out</label>
                                 <input type="time" name="schedule_time_out" class="form-control"
                                     value="{{ old('schedule_time_out', '17:00') }}">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Location / Assignment</label>
+                                <input type="text" name="location" class="form-control" value="{{ old('location') }}"
+                                    placeholder="e.g. Main Office / Site A">
                             </div>
 
                             <div class="col-12">
@@ -123,7 +134,8 @@
 
                             <div class="col-md-6 d-flex align-items-center">
                                 <div class="form-check mt-4">
-                                    <input class="form-check-input" type="checkbox" name="is_active" value="1" checked>
+                                    <input class="form-check-input" type="checkbox" name="is_active" value="1"
+                                        checked>
                                     <label class="form-check-label">Active</label>
                                 </div>
                             </div>

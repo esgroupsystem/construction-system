@@ -30,17 +30,6 @@
             <ul class="navbar-nav flex-column mb-3" id="navbarVerticalNav">
 
                 {{-- DASHBOARD --}}
-                @can('my-attendance.view')
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('employee.dashboard') ? 'active' : '' }}"
-                            href="{{ route('employee.dashboard') }}">
-                            <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-camera"></span></span>
-                                <span class="nav-link-text ps-1">My Attendance</span>
-                            </div>
-                        </a>
-                    </li>
-                @endcan
 
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
@@ -52,8 +41,20 @@
                     </a>
                 </li>
 
+                @can('employee-dashboard.view')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('employee.dashboard') ? 'active' : '' }}"
+                            href="{{ route('employee.dashboard') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-camera"></span></span>
+                                <span class="nav-link-text ps-1">My Attendance</span>
+                            </div>
+                        </a>
+                    </li>
+                @endcan
+
                 {{-- EMPLOYEE MANAGEMENT --}}
-                @canany(['employees.view', 'face-registration.view', 'face-recognition.view', 'attendance-logs.view'])
+                @canany(['employees.view', 'face-registration.view', 'attendance-logs.view'])
                     <li class="nav-item mt-3">
                         <div class="row navbar-vertical-label-wrapper mb-2">
                             <div class="col-auto navbar-vertical-label">Employee Management</div>
@@ -62,59 +63,55 @@
                             </div>
                         </div>
                     </li>
+                @endcanany
 
+                @can('employees.view')
                     <li class="nav-item">
-                        <a class="nav-link dropdown-indicator" href="#employeeMenu" role="button" data-bs-toggle="collapse"
-                            aria-expanded="{{ request()->is('employees*') || request()->is('face-registration*') || request()->is('face-recognition*') ? 'true' : 'false' }}"
-                            aria-controls="employeeMenu">
-
+                        <a class="nav-link {{ request()->routeIs('employees.index') ? 'active' : '' }}"
+                            href="{{ route('employees.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon">
-                                    <span class="fas fa-id-badge"></span>
-                                </span>
+                                <span class="nav-link-icon"><span class="fas fa-id-badge"></span></span>
                                 <span class="nav-link-text ps-1">Employees</span>
                             </div>
                         </a>
+                    </li>
+                @endcan
 
-                        <ul class="nav collapse {{ request()->is('employees*') || request()->is('face-registration*') || request()->is('face-recognition*') ? 'show' : '' }}"
-                            id="employeeMenu">
+                @can('face-registration.view')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->is('face-registration*') ? 'active' : '' }}"
+                            href="{{ route('face-registration.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-camera"></span></span>
+                                <span class="nav-link-text ps-1">Face Registration</span>
+                            </div>
+                        </a>
+                    </li>
+                @endcan
 
-                            @can('employees.view')
-                                <li class="nav-item">
-                                    <a class="nav-link {{ request()->routeIs('employees.index') ? 'active' : '' }}"
-                                        href="{{ route('employees.index') }}">
-                                        <div class="d-flex align-items-center">
-                                            <span class="nav-link-text ps-4">Employee List</span>
-                                        </div>
-                                    </a>
-                                </li>
-                            @endcan
-
-                            @can('face-registration.view')
-                                <li class="nav-item">
-                                    <a class="nav-link {{ request()->is('face-registration*') ? 'active' : '' }}"
-                                        href="{{ route('face-registration.index') }}">
-                                        <div class="d-flex align-items-center">
-                                            <span class="nav-link-text ps-4">Face Registration</span>
-                                        </div>
-                                    </a>
-                                </li>
-                            @endcan
-
-                            @can('attendance-logs.view')
-                                <li class="nav-item">
-                                    <a class="nav-link {{ request()->is('attendance-logs*') ? 'active' : '' }}"
-                                        href="{{ route('attendance-logs.index') }}">
-                                        <div class="d-flex align-items-center">
-                                            <span class="nav-link-text ps-4">Attendance Logs</span>
-                                        </div>
-                                    </a>
-                                </li>
-                            @endcan
-
-                        </ul>
+                {{-- PAYROLL MANAGEMENT --}}
+                @canany(['attendance-logs.view'])
+                    <li class="nav-item mt-3">
+                        <div class="row navbar-vertical-label-wrapper mb-2">
+                            <div class="col-auto navbar-vertical-label">Payroll Management</div>
+                            <div class="col ps-0">
+                                <hr class="mb-0 navbar-vertical-divider" />
+                            </div>
+                        </div>
                     </li>
                 @endcanany
+
+                @can('attendance-logs.view')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->is('attendance-logs*') ? 'active' : '' }}"
+                            href="{{ route('attendance-logs.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-clock"></span></span>
+                                <span class="nav-link-text ps-1">Detailed Logs</span>
+                            </div>
+                        </a>
+                    </li>
+                @endcan
 
                 {{-- USER MANAGEMENT --}}
                 @canany(['users.view', 'roles.view'])

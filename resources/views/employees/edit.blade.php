@@ -69,10 +69,15 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Location / Assignment</label>
-                                <input type="text" name="location" class="form-control"
-                                    value="{{ old('location', $employee->location) }}"
-                                    placeholder="e.g. Main Office / Site A">
+                                <label class="form-label">Payroll Type</label>
+                                <select name="payroll_type" class="form-select" required>
+                                    <option value="monthly"
+                                        {{ old('payroll_type', $employee->payroll_type) === 'monthly' ? 'selected' : '' }}>
+                                        Monthly</option>
+                                    <option value="weekly"
+                                        {{ old('payroll_type', $employee->payroll_type) === 'weekly' ? 'selected' : '' }}>
+                                        Weekly</option>
+                                </select>
                             </div>
 
                             <div class="col-md-6">
@@ -85,6 +90,13 @@
                                 <label class="form-label">Schedule Time Out</label>
                                 <input type="time" name="schedule_time_out" class="form-control"
                                     value="{{ old('schedule_time_out', $employee->schedule_time_out ? \Carbon\Carbon::parse($employee->schedule_time_out)->format('H:i') : '') }}">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Location / Assignment</label>
+                                <input type="text" name="location" class="form-control"
+                                    value="{{ old('location', $employee->location) }}"
+                                    placeholder="e.g. Main Office / Site A">
                             </div>
 
                             <div class="col-12">
