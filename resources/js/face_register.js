@@ -19,15 +19,19 @@ let isCapturing = false;
 let supportsFaceDetection = false;
 
 function setStatus(message, type = 'secondary') {
+    if (!statusBox) return;
     statusBox.className = `alert alert-${type} border mb-0 status-panel`;
     statusBox.textContent = message;
 }
 
 function updateCount() {
-    captureCount.textContent = capturedFrames.length;
+    if (captureCount) {
+        captureCount.textContent = capturedFrames.length;
+    }
 }
 
 function setCameraBadge(text, typeClass) {
+    if (!cameraStatus) return;
     cameraStatus.textContent = text;
     cameraStatus.className = `badge rounded-pill px-3 py-2 ${typeClass}`;
 }
@@ -44,6 +48,7 @@ function setFaceDetectedState(detected, message = '') {
         faceDetectedBadge.textContent = message || 'No face detected';
         faceDetectedBadge.className = 'badge rounded-pill bg-light text-dark border';
         faceGuide?.classList.remove('active');
+        faceGuide?.classList.remove('warning');
     }
 }
 
@@ -62,7 +67,7 @@ function clearOverlay() {
 }
 
 function syncOverlaySize() {
-    if (!overlay || !video.videoWidth || !video.videoHeight) return;
+    if (!overlay || !video || !video.videoWidth || !video.videoHeight) return;
     overlay.width = video.videoWidth;
     overlay.height = video.videoHeight;
 }
@@ -180,18 +185,18 @@ async function startDetectionLoop() {
 
         if (result.fallback) {
             setFaceDetectedState(true, 'Face check unavailable');
-            captureBtn.disabled = false;
+            if (captureBtn) captureBtn.disabled = false;
         } else if (!result.detected) {
             setFaceDetectedState(false, 'No face detected');
-            captureBtn.disabled = true;
+            if (captureBtn) captureBtn.disabled = true;
             setCameraBadge('Waiting Face', 'bg-warning text-dark');
         } else if (!result.centered) {
             setWarningState('Center face in guide');
-            captureBtn.disabled = true;
+            if (captureBtn) captureBtn.disabled = true;
             setCameraBadge('Align Face', 'bg-warning text-dark');
         } else {
             setFaceDetectedState(true, 'Face ready');
-            captureBtn.disabled = false;
+            if (captureBtn) captureBtn.disabled = false;
             setCameraBadge('Ready', 'bg-success');
         }
 
@@ -249,7 +254,7 @@ function stopCamera() {
     }
 
     video.srcObject = null;
-    captureBtn.disabled = true;
+    if (captureBtn) captureBtn.disabled = true;
     setCameraBadge('Idle', 'bg-secondary');
     setFaceDetectedState(false, 'No face detected');
     faceGuide?.classList.remove('active', 'warning');
@@ -278,7 +283,7 @@ async function captureSamples() {
     }
 
     isCapturing = true;
-    captureBtn.disabled = true;
+    if (captureBtn) captureBtn.disabled = true;
     capturedFrames = [];
     updateCount();
 
@@ -313,7 +318,8 @@ async function captureSamples() {
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': config.csrfToken,
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
                 frames: capturedFrames
@@ -358,12 +364,90 @@ function resetCapture() {
     capturedFrames = [];
     updateCount();
     setStatus('Capture reset. Re-align the face and capture again.', 'secondary');
+
     if (stream) {
         setCameraBadge('Camera On', 'bg-info text-dark');
     } else {
         setCameraBadge('Idle', 'bg-secondary');
     }
 }
+
+async function sendSampleAction(url, method, defaultErrorMessage) {
+    const response = await fetch(url, {
+        method,
+        headers: {
+            'X-CSRF-TOKEN': config.csrfToken,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({})
+    });
+
+    let result = {};
+    try {
+        result = await response.json();
+    } catch (e) {
+        throw new Error('Invalid server response.');
+    }
+
+    if (!response.ok || !result.success) {
+        throw new Error(result.message || defaultErrorMessage);
+    }
+
+    return result;
+}
+
+document.addEventListener('click', async function (e) {
+    const setPrimaryBtn = e.target.closest('.set-primary-btn');
+    const deleteBtn = e.target.closest('.delete-sample-btn');
+
+    if (setPrimaryBtn) {
+        e.preventDefault();
+
+        const url = setPrimaryBtn.dataset.url;
+        if (!url) return;
+
+        const originalText = setPrimaryBtn.innerHTML;
+        setPrimaryBtn.disabled = true;
+        setPrimaryBtn.innerHTML = 'Updating...';
+
+        try {
+            const result = await sendSampleAction(url, 'PUT', 'Failed to set primary sample.');
+            setStatus(result.message || 'Primary sample updated.', 'success');
+            setTimeout(() => window.location.reload(), 500);
+        } catch (error) {
+            alert(error.message || 'Failed to set primary sample.');
+            setPrimaryBtn.disabled = false;
+            setPrimaryBtn.innerHTML = originalText;
+        }
+    }
+
+    if (deleteBtn) {
+        e.preventDefault();
+
+        if (!confirm('Are you sure you want to delete this sample?')) {
+            return;
+        }
+
+        const url = deleteBtn.dataset.url;
+        if (!url) return;
+
+        const originalText = deleteBtn.innerHTML;
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = 'Deleting...';
+
+        try {
+            const result = await sendSampleAction(url, 'DELETE', 'Failed to delete sample.');
+            setStatus(result.message || 'Sample deleted successfully.', 'success');
+            setTimeout(() => window.location.reload(), 500);
+        } catch (error) {
+            alert(error.message || 'Failed to delete sample.');
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = originalText;
+        }
+    }
+});
 
 startBtn?.addEventListener('click', startCamera);
 captureBtn?.addEventListener('click', captureSamples);

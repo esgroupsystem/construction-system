@@ -175,7 +175,12 @@ class FaceRegistrationController extends Controller
 
     public function update(Employee $employee, EmployeeFaceEmbedding $sample)
     {
-        abort_unless($sample->employee_id === $employee->id, 404);
+        if ($sample->employee_id !== $employee->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sample does not belong to this employee.',
+            ], 403);
+        }
 
         DB::transaction(function () use ($employee, $sample) {
             $employee->faceEmbeddings()->update(['is_primary' => false]);
@@ -184,20 +189,26 @@ class FaceRegistrationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Primary sample updated.',
+            'message' => 'Primary sample updated successfully.',
         ]);
     }
 
     public function destroy(Employee $employee, EmployeeFaceEmbedding $sample)
     {
-        abort_unless($sample->employee_id === $employee->id, 404);
+        if ($sample->employee_id !== $employee->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sample does not belong to this employee.',
+            ], 403);
+        }
 
         DB::transaction(function () use ($employee, $sample) {
+            $wasPrimary = (bool) $sample->is_primary;
+
             if ($sample->image_path && Storage::disk('public')->exists($sample->image_path)) {
                 Storage::disk('public')->delete($sample->image_path);
             }
 
-            $wasPrimary = $sample->is_primary;
             $sample->delete();
 
             if ($wasPrimary) {

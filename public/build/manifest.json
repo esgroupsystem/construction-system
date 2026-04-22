@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-WGUZNAiy.css",
+    "file": "assets/app-CKkuRGsd.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -21,7 +21,7 @@
     "isEntry": true
   },
   "resources/js/face_register.js": {
-    "file": "assets/face_register-CaJiiCl1.js",
+    "file": "assets/face_register-jrBrYrD6.js",
     "name": "face_register",
     "src": "resources/js/face_register.js",
     "isEntry": true
