@@ -101,6 +101,30 @@
                     </li>
                 @endcanany
 
+                @can('weekly-timekeeping.view')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->is('weekly-timekeeping*') ? 'active' : '' }}"
+                            href="{{ route('weekly-timekeeping.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-calendar-week"></span></span>
+                                <span class="nav-link-text ps-1">Weekly Timekeeping</span>
+                            </div>
+                        </a>
+                    </li>
+                @endcan
+
+                @can('monthly-timekeeping.view')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->is('monthly-timekeeping*') ? 'active' : '' }}"
+                            href="{{ route('monthly-timekeeping.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-calendar-alt"></span></span>
+                                <span class="nav-link-text ps-1">Monthly Timekeeping</span>
+                            </div>
+                        </a>
+                    </li>
+                @endcan
+
                 @can('attendance-logs.view')
                     <li class="nav-item">
                         <a class="nav-link {{ request()->is('attendance-logs*') ? 'active' : '' }}"

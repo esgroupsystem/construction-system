@@ -3,8 +3,10 @@
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\FaceRegistrationController;
+use App\Http\Controllers\MonthlyTimekeepingController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WeeklyTimekeepingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -146,6 +148,55 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/face-registration/{employee}/{sample}', [FaceRegistrationController::class, 'destroy'])
         ->middleware('permission:face-registration.update')
         ->name('face-registration.destroy');
+
+    /*----------------------
+     -------- Weekly TimeKeeping --------
+    ------------------------*/
+    Route::get('/weekly-timekeeping', [WeeklyTimekeepingController::class, 'index'])
+        ->middleware('permission:weekly-timekeeping.view')
+        ->name('weekly-timekeeping.index');
+
+    Route::post('/weekly-timekeeping/cutoffs', [WeeklyTimekeepingController::class, 'storeCutoff'])
+        ->middleware('permission:weekly-timekeeping.create')
+        ->name('weekly-timekeeping.cutoffs.store');
+
+    Route::get('/weekly-timekeeping/cutoffs/{cutoff}', [WeeklyTimekeepingController::class, 'showCutoff'])
+        ->middleware('permission:weekly-timekeeping.view')
+        ->name('weekly-timekeeping.cutoffs.show');
+
+    Route::get('/weekly-timekeeping/cutoffs/{cutoff}/employees/{employee}', [WeeklyTimekeepingController::class, 'showEmployee'])
+        ->middleware('permission:weekly-timekeeping.view')
+        ->name('weekly-timekeeping.employees.show');
+
+    Route::patch('/weekly-timekeeping/cutoffs/{cutoff}/finalize', [WeeklyTimekeepingController::class, 'finalize'])
+        ->middleware('permission:weekly-timekeeping.finalize')
+        ->name('weekly-timekeeping.cutoffs.finalize');
+
+    Route::delete('/weekly-timekeeping/cutoffs/{cutoff}', [WeeklyTimekeepingController::class, 'destroy'])
+        ->middleware('permission:weekly-timekeeping.delete')
+        ->name('weekly-timekeeping.cutoffs.destroy');
+
+    /*----------------------
+     -------- Monthly TimeKeeping --------
+    ------------------------*/
+    Route::prefix('monthly-timekeeping')->name('monthly-timekeeping.')->group(function () {
+        Route::get('/', [MonthlyTimekeepingController::class, 'index'])->name('index');
+
+        Route::post('/cutoffs', [MonthlyTimekeepingController::class, 'storeCutoff'])
+            ->name('cutoffs.store');
+
+        Route::get('/cutoffs/{cutoff}', [MonthlyTimekeepingController::class, 'showCutoff'])
+            ->name('cutoffs.show');
+
+        Route::patch('/cutoffs/{cutoff}/finalize', [MonthlyTimekeepingController::class, 'finalizeCutoff'])
+            ->name('cutoffs.finalize');
+
+        Route::delete('/cutoffs/{cutoff}', [MonthlyTimekeepingController::class, 'destroyCutoff'])
+            ->name('cutoffs.destroy');
+
+        Route::get('/cutoffs/{cutoff}/employees/{employee}', [MonthlyTimekeepingController::class, 'showEmployee'])
+            ->name('employees.show');
+    });
 });
 
 require __DIR__.'/auth.php';
