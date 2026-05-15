@@ -3,6 +3,7 @@
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\FaceRegistrationController;
+use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MonthlyTimekeepingController;
 use App\Http\Controllers\RoleController;
@@ -226,6 +227,38 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/locations/{location}', [LocationController::class, 'destroy'])
         ->middleware('permission:locations.delete')
         ->name('locations.destroy');
+
+    /*----------------------
+    -------- HOLIDAYS --------
+    ------------------------*/
+
+    Route::get('/holidays', [HolidayController::class, 'index'])
+        ->middleware('permission:holidays.view')
+        ->name('holidays.index');
+
+    Route::get('/holidays/create', [HolidayController::class, 'create'])
+        ->middleware('permission:holidays.create')
+        ->name('holidays.create');
+
+    Route::post('/holidays', [HolidayController::class, 'store'])
+        ->middleware('permission:holidays.create')
+        ->name('holidays.store');
+
+    Route::post('/holidays/generate', [HolidayController::class, 'generate'])
+        ->middleware('permission:holidays.create')
+        ->name('holidays.generate');
+
+    Route::get('/holidays/{holiday}/edit', [HolidayController::class, 'edit'])
+        ->middleware('permission:holidays.update')
+        ->name('holidays.edit');
+
+    Route::put('/holidays/{holiday}', [HolidayController::class, 'update'])
+        ->middleware('permission:holidays.update')
+        ->name('holidays.update');
+
+    Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])
+        ->middleware('permission:holidays.delete')
+        ->name('holidays.destroy');
 });
 
 require __DIR__.'/auth.php';
