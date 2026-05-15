@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendance;
 use App\Models\Employee;
+use App\Models\Holiday;
 use App\Models\WeeklyCutoff;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -44,7 +45,7 @@ class WeeklyTimekeepingController extends Controller
         if ($existingCutoff) {
             return back()
                 ->withInput()
-                ->with('error', 'This date range is already used by another cutoff. Please choose a different date.');
+                ->with('error', 'This date range is already used by another cutoff.');
         }
 
         WeeklyCutoff::create([
@@ -68,37 +69,32 @@ class WeeklyTimekeepingController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view('weekly-timekeeping.cutoff', compact('cutoff', 'employees'));
+        $holidayCount = Holiday::query()
+            ->where('is_active', 1)
+            ->whereBetween('holiday_date', [$cutoff->date_from, $cutoff->date_to])
+            ->count();
+
+        return view('weekly-timekeeping.cutoff', compact('cutoff', 'employees', 'holidayCount'));
     }
 
     public function showEmployee(WeeklyCutoff $cutoff, Employee $employee)
     {
-        $dateFrom = $cutoff->date_from;
-        $dateTo = $cutoff->date_to;
+        $dateFrom = Carbon::parse($cutoff->date_from)->format('Y-m-d');
+        $dateTo = Carbon::parse($cutoff->date_to)->format('Y-m-d');
 
         $attendanceRecords = Attendance::query()
             ->where('employee_id', $employee->id)
             ->whereBetween('attendance_date', [$dateFrom, $dateTo])
             ->get()
-            ->keyBy(function ($attendance) {
-                return Carbon::parse($attendance->attendance_date)->format('Y-m-d');
-            });
+            ->keyBy(fn ($attendance) => Carbon::parse($attendance->attendance_date)->format('Y-m-d'));
 
-        $dayOffs = $employee->day_offs;
+        $holidays = Holiday::query()
+            ->where('is_active', 1)
+            ->whereBetween('holiday_date', [$dateFrom, $dateTo])
+            ->get()
+            ->keyBy(fn ($holiday) => Carbon::parse($holiday->holiday_date)->format('Y-m-d'));
 
-        if (is_string($dayOffs)) {
-            $decoded = json_decode($dayOffs, true);
-
-            if (is_string($decoded)) {
-                $decoded = json_decode($decoded, true);
-            }
-
-            $dayOffs = $decoded;
-        }
-
-        if (! is_array($dayOffs)) {
-            $dayOffs = [];
-        }
+        $dayOffs = $this->normalizeDayOffs($employee->day_offs);
 
         $attendances = collect();
 
@@ -115,7 +111,10 @@ class WeeklyTimekeepingController extends Controller
                 'time_out' => null,
             ]);
 
+            $holiday = $holidays->get($dateKey);
+
             $isRestDay = in_array($dayName, $dayOffs);
+            $isHoliday = ! is_null($holiday);
 
             $scheduleIn = Carbon::parse($dateKey.' '.$employee->schedule_time_in);
             $scheduleOut = Carbon::parse($dateKey.' '.$employee->schedule_time_out);
@@ -126,11 +125,11 @@ class WeeklyTimekeepingController extends Controller
             $workingMinutes = ($timeIn && $timeOut) ? $timeIn->diffInMinutes($timeOut) : 0;
             $dutyMinutes = $scheduleIn->diffInMinutes($scheduleOut);
 
-            $lateMinutes = (! $isRestDay && $timeIn && $timeIn->gt($scheduleIn))
+            $lateMinutes = (! $isRestDay && ! $isHoliday && $timeIn && $timeIn->gt($scheduleIn))
                 ? $scheduleIn->diffInMinutes($timeIn)
                 : 0;
 
-            $earlyMinutes = (! $isRestDay && $timeOut && $timeOut->lt($scheduleOut))
+            $earlyMinutes = (! $isRestDay && ! $isHoliday && $timeOut && $timeOut->lt($scheduleOut))
                 ? $timeOut->diffInMinutes($scheduleOut)
                 : 0;
 
@@ -138,20 +137,35 @@ class WeeklyTimekeepingController extends Controller
                 ? $scheduleOut->diffInMinutes($timeOut)
                 : 0;
 
+            $absentMinutes = (! $isRestDay && ! $isHoliday && $workingMinutes == 0)
+                ? $dutyMinutes
+                : 0;
+
             $attendance->is_rest_day = $isRestDay;
+            $attendance->is_holiday = $isHoliday;
+            $attendance->holiday_name = $holiday?->name;
+            $attendance->holiday_type = $holiday?->type;
+
             $attendance->display_date = $currentDate->format('M j');
             $attendance->display_day = $currentDate->format('D');
+
             $attendance->working_time = $this->formatMinutes($workingMinutes);
             $attendance->late_time = $this->formatMinutes($lateMinutes);
             $attendance->early_time = $this->formatMinutes($earlyMinutes);
             $attendance->ot_time = $this->formatMinutes($otMinutes);
-            $attendance->absent_time = (! $isRestDay && $workingMinutes == 0)
-                ? $this->formatMinutes($dutyMinutes)
-                : '00:00';
+            $attendance->absent_time = $this->formatMinutes($absentMinutes);
             $attendance->actual_working_time = $this->formatMinutes($workingMinutes);
 
             if ($isRestDay) {
                 $attendance->exception = 'Rest Day';
+            } elseif ($isHoliday && $workingMinutes > 0) {
+                $attendance->exception = $holiday->type === 'regular'
+                    ? 'Worked Regular Holiday'
+                    : 'Worked Special Holiday';
+            } elseif ($isHoliday) {
+                $attendance->exception = $holiday->type === 'regular'
+                    ? 'Regular Holiday'
+                    : 'Special Holiday';
             } elseif ($workingMinutes == 0) {
                 $attendance->exception = 'Absent';
             } elseif ($lateMinutes > 0) {
@@ -165,7 +179,6 @@ class WeeklyTimekeepingController extends Controller
             }
 
             $attendances->push($attendance);
-
             $currentDate->addDay();
         }
 
@@ -190,14 +203,6 @@ class WeeklyTimekeepingController extends Controller
         return back()->with('success', 'Cutoff finalized successfully.');
     }
 
-    private function formatMinutes($minutes)
-    {
-        $hours = floor($minutes / 60);
-        $mins = $minutes % 60;
-
-        return sprintf('%02d:%02d', $hours, $mins);
-    }
-
     public function destroy($id)
     {
         $cutoff = WeeklyCutoff::findOrFail($id);
@@ -211,5 +216,28 @@ class WeeklyTimekeepingController extends Controller
         return redirect()
             ->route('weekly-timekeeping.index')
             ->with('success', 'Weekly cutoff deleted successfully.');
+    }
+
+    private function normalizeDayOffs($dayOffs): array
+    {
+        if (is_string($dayOffs)) {
+            $decoded = json_decode($dayOffs, true);
+
+            if (is_string($decoded)) {
+                $decoded = json_decode($decoded, true);
+            }
+
+            $dayOffs = $decoded;
+        }
+
+        return is_array($dayOffs) ? $dayOffs : [];
+    }
+
+    private function formatMinutes($minutes): string
+    {
+        $hours = floor($minutes / 60);
+        $mins = $minutes % 60;
+
+        return sprintf('%02d:%02d', $hours, $mins);
     }
 }
