@@ -93,10 +93,18 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Location / Assignment</label>
-                                <input type="text" name="location" class="form-control"
-                                    value="{{ old('location', $employee->location) }}"
-                                    placeholder="e.g. Main Office / Site A">
+                                <label class="form-label">Location</label>
+
+                                <select name="location" class="form-select" required>
+                                    <option value="">Select Location</option>
+
+                                    @foreach ($locations as $location)
+                                        <option value="{{ $location->name }}"
+                                            {{ old('location', $employee->location) == $location->name ? 'selected' : '' }}>
+                                            {{ $location->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
 
                             <div class="col-12">

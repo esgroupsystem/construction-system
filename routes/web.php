@@ -3,6 +3,7 @@
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\FaceRegistrationController;
+use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MonthlyTimekeepingController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
@@ -197,6 +198,34 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/cutoffs/{cutoff}/employees/{employee}', [MonthlyTimekeepingController::class, 'showEmployee'])
             ->name('employees.show');
     });
+
+    /*----------------------
+    -------- LOCATIONS --------
+    ------------------------*/
+
+    Route::get('/locations', [LocationController::class, 'index'])
+        ->middleware('permission:locations.view')
+        ->name('locations.index');
+
+    Route::get('/locations/create', [LocationController::class, 'create'])
+        ->middleware('permission:locations.create')
+        ->name('locations.create');
+
+    Route::post('/locations', [LocationController::class, 'store'])
+        ->middleware('permission:locations.create')
+        ->name('locations.store');
+
+    Route::get('/locations/{location}/edit', [LocationController::class, 'edit'])
+        ->middleware('permission:locations.update')
+        ->name('locations.edit');
+
+    Route::put('/locations/{location}', [LocationController::class, 'update'])
+        ->middleware('permission:locations.update')
+        ->name('locations.update');
+
+    Route::delete('/locations/{location}', [LocationController::class, 'destroy'])
+        ->middleware('permission:locations.delete')
+        ->name('locations.destroy');
 });
 
 require __DIR__.'/auth.php';

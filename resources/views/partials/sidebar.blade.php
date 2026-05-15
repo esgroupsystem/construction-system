@@ -89,6 +89,23 @@
                     </li>
                 @endcan
 
+                @can('locations.view')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('locations.*') ? 'active' : '' }}"
+                            href="{{ route('locations.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon">
+                                    <span class="fas fa-map-marker-alt"></span>
+                                </span>
+
+                                <span class="nav-link-text ps-1">
+                                    Locations
+                                </span>
+                            </div>
+                        </a>
+                    </li>
+                @endcan
+
                 {{-- PAYROLL MANAGEMENT --}}
                 @canany(['attendance-logs.view'])
                     <li class="nav-item mt-3">

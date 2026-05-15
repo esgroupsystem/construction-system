@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Models\Location;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -32,7 +33,11 @@ class EmployeeController extends Controller
 
     public function create()
     {
-        return view('employees.create');
+        $locations = Location::where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('employees.create', compact('locations'));
     }
 
     public function store(Request $request)
@@ -96,7 +101,11 @@ class EmployeeController extends Controller
 
     public function edit(Employee $employee)
     {
-        return view('employees.edit', compact('employee'));
+        $locations = Location::where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('employees.edit', compact('employee', 'locations'));
     }
 
     public function update(Request $request, Employee $employee)
