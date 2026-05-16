@@ -25,15 +25,15 @@
 
                                 <button type="submit" class="btn btn-falcon-success btn-sm confirm-action"
                                     data-title="Finalize Monthly Cutoff"
-                                    data-message="Are you sure you want to finalize this monthly cutoff?"
+                                    data-message="Make sure all monthly employees are finalized before finalizing this cutoff."
                                     data-confirm-text="Finalize">
                                     <span class="fas fa-check-circle me-1"></span>
                                     Finalize Cutoff
                                 </button>
                             </form>
                         @else
-                            <span class="badge rounded-pill px-3 py-2"
-                                style="background-color:#d1f7e5;color:#198754;font-weight:600;">
+                            <span class="badge rounded-pill badge-subtle-success text-success px-3 py-2">
+                                <span class="fas fa-check-circle me-1"></span>
                                 Finalized
                             </span>
                         @endif
@@ -115,13 +115,11 @@
                             <h6 class="mb-1 text-muted">Cutoff Status</h6>
 
                             @if ($cutoff->status === 'finalized')
-                                <span class="badge rounded-pill px-3 py-2"
-                                    style="background-color:#d1f7e5;color:#198754;font-weight:600;">
+                                <span class="badge rounded-pill badge-subtle-success text-success px-3 py-2">
                                     Finalized
                                 </span>
                             @else
-                                <span class="badge rounded-pill px-3 py-2"
-                                    style="background-color:#fff3cd;color:#b76e00;font-weight:600;">
+                                <span class="badge rounded-pill badge-subtle-warning text-warning px-3 py-2">
                                     {{ ucfirst($cutoff->status) }}
                                 </span>
                             @endif
@@ -199,7 +197,7 @@
                                 <th>Employee Name</th>
                                 <th>Department</th>
                                 <th>Position</th>
-                                <th class="text-center">Status</th>
+                                <th class="text-center">Timekeeping Status</th>
                                 <th class="text-center pe-3">Action</th>
                             </tr>
                         </thead>
@@ -222,11 +220,17 @@
                                     <td>{{ $employee->position ?? 'N/A' }}</td>
 
                                     <td class="text-center">
-                                        <span class="badge rounded-pill px-3 py-2"
-                                            style="background-color:#d1f7e5;color:#198754;font-weight:600;">
-                                            <span class="fas fa-circle me-1" style="font-size:7px;color:#198754;"></span>
-                                            Active
-                                        </span>
+                                        @if (in_array($employee->id, $finalizedEmployeeIds))
+                                            <span class="badge rounded-pill badge-subtle-success text-success px-3 py-2">
+                                                <span class="fas fa-check-circle me-1"></span>
+                                                Finalized
+                                            </span>
+                                        @else
+                                            <span class="badge rounded-pill badge-subtle-warning text-warning px-3 py-2">
+                                                <span class="fas fa-clock me-1"></span>
+                                                Pending Review
+                                            </span>
+                                        @endif
                                     </td>
 
                                     <td class="text-center pe-3">
@@ -264,4 +268,16 @@
         </div>
 
     </div>
+
+    <style>
+        .avatar-name {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .avatar-name span {
+            line-height: 1 !important;
+        }
+    </style>
 @endsection

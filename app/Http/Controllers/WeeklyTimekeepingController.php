@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\WeeklyCutoff;
+use App\Models\WeeklyTimekeepingRecord;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -66,15 +67,21 @@ class WeeklyTimekeepingController extends Controller
             ->where('payroll_type', 'weekly')
             ->where('is_active', 1)
             ->orderBy('full_name')
-            ->paginate(10)
+            ->paginate(15)
             ->withQueryString();
 
-        $holidayCount = Holiday::query()
-            ->where('is_active', 1)
-            ->whereBetween('holiday_date', [$cutoff->date_from, $cutoff->date_to])
-            ->count();
+        $finalizedEmployeeIds = WeeklyTimekeepingRecord::query()
+            ->where('weekly_cutoff_id', $cutoff->id)
+            ->where('is_finalized', true)
+            ->pluck('employee_id')
+            ->unique()
+            ->toArray();
 
-        return view('weekly-timekeeping.cutoff', compact('cutoff', 'employees', 'holidayCount'));
+        return view('weekly-timekeeping.cutoff', compact(
+            'cutoff',
+            'employees',
+            'finalizedEmployeeIds'
+        ));
     }
 
     public function showEmployee(WeeklyCutoff $cutoff, Employee $employee)
@@ -93,6 +100,19 @@ class WeeklyTimekeepingController extends Controller
             ->whereBetween('holiday_date', [$dateFrom, $dateTo])
             ->get()
             ->keyBy(fn ($holiday) => Carbon::parse($holiday->holiday_date)->format('Y-m-d'));
+
+        $timekeepingRecords = WeeklyTimekeepingRecord::query()
+            ->where('weekly_cutoff_id', $cutoff->id)
+            ->where('employee_id', $employee->id)
+            ->whereBetween('attendance_date', [$dateFrom, $dateTo])
+            ->get()
+            ->keyBy(fn ($record) => Carbon::parse($record->attendance_date)->format('Y-m-d'));
+
+        $employeeFinalized = WeeklyTimekeepingRecord::query()
+            ->where('weekly_cutoff_id', $cutoff->id)
+            ->where('employee_id', $employee->id)
+            ->where('is_finalized', true)
+            ->exists();
 
         $dayOffs = $this->normalizeDayOffs($employee->day_offs);
 
@@ -137,6 +157,12 @@ class WeeklyTimekeepingController extends Controller
                 ? $scheduleOut->diffInMinutes($timeOut)
                 : 0;
 
+            $timekeepingRecord = $timekeepingRecords->get($dateKey);
+
+            $approvedOtMinutes = $timekeepingRecord?->approved_ot_minutes ?? 0;
+            $otStatus = $timekeepingRecord?->ot_status ?? ($otMinutes > 0 ? 'pending' : 'approved');
+            $remarks = $timekeepingRecord?->remarks;
+
             $absentMinutes = (! $isRestDay && ! $isHoliday && $workingMinutes == 0)
                 ? $dutyMinutes
                 : 0;
@@ -152,9 +178,17 @@ class WeeklyTimekeepingController extends Controller
             $attendance->working_time = $this->formatMinutes($workingMinutes);
             $attendance->late_time = $this->formatMinutes($lateMinutes);
             $attendance->early_time = $this->formatMinutes($earlyMinutes);
-            $attendance->ot_time = $this->formatMinutes($otMinutes);
+            $attendance->ot_time = $this->formatMinutes($approvedOtMinutes);
+            $attendance->computed_ot_time = $this->formatMinutes($otMinutes);
             $attendance->absent_time = $this->formatMinutes($absentMinutes);
             $attendance->actual_working_time = $this->formatMinutes($workingMinutes);
+
+            $attendance->computed_ot_minutes = $otMinutes;
+            $attendance->approved_ot_minutes = $approvedOtMinutes;
+            $attendance->approved_ot_time = $this->formatMinutes($approvedOtMinutes);
+            $attendance->ot_status = $otStatus;
+            $attendance->remarks = $remarks;
+            $attendance->is_employee_finalized = $employeeFinalized;
 
             if ($isRestDay) {
                 $attendance->exception = 'Rest Day';
@@ -189,18 +223,42 @@ class WeeklyTimekeepingController extends Controller
             'employee',
             'attendances',
             'dateFrom',
-            'dateTo'
+            'dateTo',
+            'employeeFinalized'
         ));
     }
 
     public function finalize(WeeklyCutoff $cutoff)
     {
+        $weeklyEmployeeIds = Employee::query()
+            ->where('payroll_type', 'weekly')
+            ->where('is_active', 1)
+            ->pluck('id')
+            ->toArray();
+
+        $finalizedEmployeeIds = WeeklyTimekeepingRecord::query()
+            ->where('weekly_cutoff_id', $cutoff->id)
+            ->where('is_finalized', true)
+            ->whereIn('employee_id', $weeklyEmployeeIds)
+            ->pluck('employee_id')
+            ->unique()
+            ->toArray();
+
+        $pendingEmployeeCount = count(array_diff($weeklyEmployeeIds, $finalizedEmployeeIds));
+
+        if ($pendingEmployeeCount > 0) {
+            return back()->with(
+                'error',
+                'Cannot finalize cutoff. There are still '.$pendingEmployeeCount.' employee(s) pending review.'
+            );
+        }
+
         $cutoff->update([
             'status' => 'finalized',
             'finalized_at' => now(),
         ]);
 
-        return back()->with('success', 'Cutoff finalized successfully.');
+        return back()->with('success', 'Weekly cutoff finalized successfully.');
     }
 
     public function destroy($id)
@@ -239,5 +297,112 @@ class WeeklyTimekeepingController extends Controller
         $mins = $minutes % 60;
 
         return sprintf('%02d:%02d', $hours, $mins);
+    }
+
+    public function saveEmployeeOtApproval(Request $request, WeeklyCutoff $cutoff, Employee $employee)
+    {
+        $request->validate([
+            'records' => ['nullable', 'array'],
+            'records.*.attendance_date' => ['required', 'date'],
+            'records.*.computed_ot_minutes' => ['nullable', 'integer', 'min:0'],
+            'records.*.approved_ot_minutes' => ['nullable', 'integer', 'min:0'],
+            'records.*.ot_status' => ['required', 'in:pending,approved,rejected'],
+            'records.*.remarks' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $alreadyFinalized = WeeklyTimekeepingRecord::query()
+            ->where('weekly_cutoff_id', $cutoff->id)
+            ->where('employee_id', $employee->id)
+            ->where('is_finalized', true)
+            ->exists();
+
+        if ($alreadyFinalized) {
+            return back()->with('error', 'This employee timekeeping is already finalized.');
+        }
+
+        foreach ($request->records ?? [] as $record) {
+            $computedOtMinutes = (int) ($record['computed_ot_minutes'] ?? 0);
+            $otStatus = $record['ot_status'];
+
+            $approvedOtMinutes = 0;
+
+            if ($otStatus === 'approved') {
+                $approvedOtMinutes = $computedOtMinutes;
+            }
+
+            if ($otStatus === 'pending' || $otStatus === 'rejected') {
+                $approvedOtMinutes = 0;
+            }
+
+            WeeklyTimekeepingRecord::updateOrCreate(
+                [
+                    'weekly_cutoff_id' => $cutoff->id,
+                    'employee_id' => $employee->id,
+                    'attendance_date' => $record['attendance_date'],
+                ],
+                [
+                    'computed_ot_minutes' => $computedOtMinutes,
+                    'approved_ot_minutes' => $approvedOtMinutes,
+                    'ot_status' => $otStatus,
+                    'remarks' => $record['remarks'] ?? null,
+                ]
+            );
+        }
+
+        return back()->with('success', 'OT approval saved successfully.');
+    }
+
+    public function finalizeEmployee(WeeklyCutoff $cutoff, Employee $employee)
+    {
+        $dateFrom = Carbon::parse($cutoff->date_from)->format('Y-m-d');
+        $dateTo = Carbon::parse($cutoff->date_to)->format('Y-m-d');
+
+        $pendingOtExists = WeeklyTimekeepingRecord::query()
+            ->where('weekly_cutoff_id', $cutoff->id)
+            ->where('employee_id', $employee->id)
+            ->whereBetween('attendance_date', [$dateFrom, $dateTo])
+            ->where('computed_ot_minutes', '>', 0)
+            ->where('ot_status', 'pending')
+            ->exists();
+
+        if ($pendingOtExists) {
+            return back()->with('error', 'Cannot finalize. Please approve or reject all pending OT first.');
+        }
+
+        $currentDate = Carbon::parse($dateFrom);
+        $endDate = Carbon::parse($dateTo);
+
+        while ($currentDate <= $endDate) {
+            WeeklyTimekeepingRecord::updateOrCreate(
+                [
+                    'weekly_cutoff_id' => $cutoff->id,
+                    'employee_id' => $employee->id,
+                    'attendance_date' => $currentDate->format('Y-m-d'),
+                ],
+                [
+                    'is_finalized' => true,
+                    'finalized_at' => now(),
+                ]
+            );
+
+            $currentDate->addDay();
+        }
+
+        return redirect()
+            ->route('weekly-timekeeping.cutoffs.show', $cutoff->id)
+            ->with('success', 'Employee timekeeping finalized successfully.');
+    }
+
+    public function unfinalizeEmployee(WeeklyCutoff $cutoff, Employee $employee)
+    {
+        WeeklyTimekeepingRecord::query()
+            ->where('weekly_cutoff_id', $cutoff->id)
+            ->where('employee_id', $employee->id)
+            ->update([
+                'is_finalized' => false,
+                'finalized_at' => null,
+            ]);
+
+        return back()->with('success', 'Employee timekeeping reopened successfully.');
     }
 }

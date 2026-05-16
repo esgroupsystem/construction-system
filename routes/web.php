@@ -178,31 +178,60 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('permission:weekly-timekeeping.delete')
         ->name('weekly-timekeeping.cutoffs.destroy');
 
-    /*----------------------
+    Route::post('/weekly-timekeeping/cutoffs/{cutoff}/employees/{employee}/ot-approval', [WeeklyTimekeepingController::class, 'saveEmployeeOtApproval'])
+        ->middleware('permission:weekly-timekeeping.update')
+        ->name('weekly-timekeeping.employees.ot-approval');
+
+    Route::patch('/weekly-timekeeping/cutoffs/{cutoff}/employees/{employee}/finalize', [WeeklyTimekeepingController::class, 'finalizeEmployee'])
+        ->middleware('permission:weekly-timekeeping.update')
+        ->name('weekly-timekeeping.employees.finalize');
+
+    Route::patch('/weekly-timekeeping/cutoffs/{cutoff}/employees/{employee}/unfinalize', [WeeklyTimekeepingController::class, 'unfinalizeEmployee'])
+        ->middleware('permission:weekly-timekeeping.update')
+        ->name('weekly-timekeeping.employees.unfinalize');
+
+    /*------------------------------------
      -------- Monthly TimeKeeping --------
-    ------------------------*/
-    Route::prefix('monthly-timekeeping')->name('monthly-timekeeping.')->group(function () {
-        Route::get('/', [MonthlyTimekeepingController::class, 'index'])->name('index');
+    --------------------------------------*/
+    Route::get('/monthly-timekeeping', [MonthlyTimekeepingController::class, 'index'])
+        ->middleware('permission:monthly-timekeeping.view')
+        ->name('monthly-timekeeping.index');
 
-        Route::post('/cutoffs', [MonthlyTimekeepingController::class, 'storeCutoff'])
-            ->name('cutoffs.store');
+    Route::post('/monthly-timekeeping/cutoffs', [MonthlyTimekeepingController::class, 'storeCutoff'])
+        ->middleware('permission:monthly-timekeeping.create')
+        ->name('monthly-timekeeping.cutoffs.store');
 
-        Route::get('/cutoffs/{cutoff}', [MonthlyTimekeepingController::class, 'showCutoff'])
-            ->name('cutoffs.show');
+    Route::get('/monthly-timekeeping/cutoffs/{cutoff}', [MonthlyTimekeepingController::class, 'showCutoff'])
+        ->middleware('permission:monthly-timekeeping.view')
+        ->name('monthly-timekeeping.cutoffs.show');
 
-        Route::patch('/cutoffs/{cutoff}/finalize', [MonthlyTimekeepingController::class, 'finalizeCutoff'])
-            ->name('cutoffs.finalize');
+    Route::patch('/monthly-timekeeping/cutoffs/{cutoff}/finalize', [MonthlyTimekeepingController::class, 'finalizeCutoff'])
+        ->middleware('permission:monthly-timekeeping.update')
+        ->name('monthly-timekeeping.cutoffs.finalize');
 
-        Route::delete('/cutoffs/{cutoff}', [MonthlyTimekeepingController::class, 'destroyCutoff'])
-            ->name('cutoffs.destroy');
+    Route::delete('/monthly-timekeeping/cutoffs/{cutoff}', [MonthlyTimekeepingController::class, 'destroyCutoff'])
+        ->middleware('permission:monthly-timekeeping.delete')
+        ->name('monthly-timekeeping.cutoffs.destroy');
 
-        Route::get('/cutoffs/{cutoff}/employees/{employee}', [MonthlyTimekeepingController::class, 'showEmployee'])
-            ->name('employees.show');
-    });
+    Route::get('/monthly-timekeeping/cutoffs/{cutoff}/employees/{employee}', [MonthlyTimekeepingController::class, 'showEmployee'])
+        ->middleware('permission:monthly-timekeeping.view')
+        ->name('monthly-timekeeping.employees.show');
 
-    /*----------------------
+    Route::post('/monthly-timekeeping/cutoffs/{cutoff}/employees/{employee}/ot-approval', [MonthlyTimekeepingController::class, 'saveEmployeeOtApproval'])
+        ->middleware('permission:monthly-timekeeping.update')
+        ->name('monthly-timekeeping.employees.ot-approval');
+
+    Route::patch('/monthly-timekeeping/cutoffs/{cutoff}/employees/{employee}/finalize', [MonthlyTimekeepingController::class, 'finalizeEmployee'])
+        ->middleware('permission:monthly-timekeeping.update')
+        ->name('monthly-timekeeping.employees.finalize');
+
+    Route::patch('/monthly-timekeeping/cutoffs/{cutoff}/employees/{employee}/unfinalize', [MonthlyTimekeepingController::class, 'unfinalizeEmployee'])
+        ->middleware('permission:monthly-timekeeping.update')
+        ->name('monthly-timekeeping.employees.unfinalize');
+
+    /*------------------------
     -------- LOCATIONS --------
-    ------------------------*/
+    -------------------------*/
 
     Route::get('/locations', [LocationController::class, 'index'])
         ->middleware('permission:locations.view')

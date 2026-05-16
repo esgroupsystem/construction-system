@@ -37,6 +37,59 @@
             </div>
         </div>
 
+        {{-- Review Status --}}
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body py-3">
+                <div class="row align-items-center">
+                    <div class="col">
+                        @if ($employeeFinalized)
+                            <span class="badge rounded-pill badge-subtle-success text-success px-3 py-2">
+                                <span class="fas fa-check-circle me-1"></span>
+                                Employee Timekeeping Finalized
+                            </span>
+                        @else
+                            <span class="badge rounded-pill badge-subtle-warning text-warning px-3 py-2">
+                                <span class="fas fa-clock me-1"></span>
+                                Pending OT Review
+                            </span>
+                        @endif
+                    </div>
+
+                    <div class="col-auto d-flex gap-2">
+                        @if (!$employeeFinalized)
+                            <form method="POST"
+                                action="{{ route('weekly-timekeeping.employees.finalize', ['cutoff' => $cutoff->id, 'employee' => $employee->id]) }}">
+                                @csrf
+                                @method('PATCH')
+
+                                <button type="submit" class="btn btn-falcon-success btn-sm confirm-action"
+                                    data-title="Finalize Employee Timekeeping"
+                                    data-message="Make sure all computed OT is approved or rejected before finalizing."
+                                    data-confirm-text="Finalize">
+                                    <span class="fas fa-check-circle me-1"></span>
+                                    Finalize Employee
+                                </button>
+                            </form>
+                        @else
+                            <form method="POST"
+                                action="{{ route('weekly-timekeeping.employees.unfinalize', ['cutoff' => $cutoff->id, 'employee' => $employee->id]) }}">
+                                @csrf
+                                @method('PATCH')
+
+                                <button type="submit" class="btn btn-falcon-warning btn-sm confirm-action"
+                                    data-title="Reopen Employee Timekeeping"
+                                    data-message="Are you sure you want to reopen this employee timekeeping?"
+                                    data-confirm-text="Reopen">
+                                    <span class="fas fa-undo me-1"></span>
+                                    Reopen
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- Info Cards --}}
         <div class="row g-3 mb-3">
 
@@ -141,7 +194,7 @@
                             <div>
                                 <h5 class="mb-1 fw-bold text-900">Attendance Report</h5>
                                 <small class="text-600">
-                                    Daily attendance summary with worked hours, late, early out, OT, and absences
+                                    Review computed OT, approve OT minutes, then finalize employee timekeeping.
                                 </small>
                             </div>
                         </div>
@@ -154,6 +207,12 @@
                     </div>
                 </div>
             </div>
+
+            @if (!$employeeFinalized)
+                <form method="POST"
+                    action="{{ route('weekly-timekeeping.employees.ot-approval', ['cutoff' => $cutoff->id, 'employee' => $employee->id]) }}">
+                    @csrf
+            @endif
 
             <div class="card-body p-0">
                 <div class="table-responsive scrollbar">
@@ -168,7 +227,9 @@
                                 <th class="text-center border-start">Worked</th>
                                 <th class="text-center">Late</th>
                                 <th class="text-center">Early Out</th>
-                                <th class="text-center">OT</th>
+                                <th class="text-center">Computed OT</th>
+                                <th class="text-center">Approved OT</th>
+                                <th class="text-center">OT Approval</th>
                                 <th class="text-center">Absent</th>
                                 <th class="text-center">Actual</th>
                                 <th class="text-center pe-3">Status</th>
@@ -201,7 +262,8 @@
                                 $totalWorkedMinutes = 0;
                                 $totalLateMinutes = 0;
                                 $totalEarlyMinutes = 0;
-                                $totalOtMinutes = 0;
+                                $totalComputedOtMinutes = 0;
+                                $totalApprovedOtMinutes = 0;
                                 $totalAbsentMinutes = 0;
                             @endphp
 
@@ -210,19 +272,28 @@
                                     [$workedHour, $workedMin] = explode(':', $attendance->working_time);
                                     [$lateHour, $lateMin] = explode(':', $attendance->late_time);
                                     [$earlyHour, $earlyMin] = explode(':', $attendance->early_time);
-                                    [$otHour, $otMin] = explode(':', $attendance->ot_time);
+                                    [$computedOtHour, $computedOtMin] = explode(
+                                        ':',
+                                        $attendance->computed_ot_time ?? '00:00',
+                                    );
+                                    [$approvedOtHour, $approvedOtMin] = explode(
+                                        ':',
+                                        $attendance->approved_ot_time ?? '00:00',
+                                    );
                                     [$absentHour, $absentMin] = explode(':', $attendance->absent_time);
 
                                     $workedTotal = (int) $workedHour * 60 + (int) $workedMin;
                                     $lateTotal = (int) $lateHour * 60 + (int) $lateMin;
                                     $earlyTotal = (int) $earlyHour * 60 + (int) $earlyMin;
-                                    $otTotal = (int) $otHour * 60 + (int) $otMin;
+                                    $computedOtTotal = (int) $computedOtHour * 60 + (int) $computedOtMin;
+                                    $approvedOtTotal = (int) $approvedOtHour * 60 + (int) $approvedOtMin;
                                     $absentTotal = (int) $absentHour * 60 + (int) $absentMin;
 
                                     $totalWorkedMinutes += $workedTotal;
                                     $totalLateMinutes += $lateTotal;
                                     $totalEarlyMinutes += $earlyTotal;
-                                    $totalOtMinutes += $otTotal;
+                                    $totalComputedOtMinutes += $computedOtTotal;
+                                    $totalApprovedOtMinutes += $approvedOtTotal;
                                     $totalAbsentMinutes += $absentTotal;
                                 @endphp
 
@@ -313,10 +384,77 @@
                                     </td>
 
                                     <td class="text-center">
-                                        @if ($attendance->ot_time !== '00:00')
+                                        @if (($attendance->computed_ot_time ?? '00:00') !== '00:00')
                                             <span class="fw-bold text-success">
-                                                {{ readableTime($attendance->ot_time) }}
+                                                {{ readableTime($attendance->computed_ot_time) }}
                                             </span>
+                                        @else
+                                            <span class="text-600">-</span>
+                                        @endif
+                                    </td>
+
+                                    <td class="text-center">
+                                        @if (($attendance->approved_ot_time ?? '00:00') !== '00:00')
+                                            <span class="fw-bold text-primary">
+                                                {{ readableTime($attendance->approved_ot_time) }}
+                                            </span>
+                                        @else
+                                            <span class="text-600">-</span>
+                                        @endif
+                                    </td>
+
+                                    <td class="text-center" style="min-width: 180px;">
+                                        @if (($attendance->computed_ot_minutes ?? 0) > 0)
+                                            @if ($employeeFinalized)
+                                                @if ($attendance->ot_status === 'approved')
+                                                    <span
+                                                        class="badge rounded-pill badge-subtle-success text-success px-3 py-2">
+                                                        Approved
+                                                    </span>
+                                                @elseif ($attendance->ot_status === 'rejected')
+                                                    <span
+                                                        class="badge rounded-pill badge-subtle-danger text-danger px-3 py-2">
+                                                        Rejected
+                                                    </span>
+                                                @else
+                                                    <span
+                                                        class="badge rounded-pill badge-subtle-warning text-warning px-3 py-2">
+                                                        Pending
+                                                    </span>
+                                                @endif
+
+                                                @if ($attendance->remarks)
+                                                    <div class="small text-600 mt-1">
+                                                        {{ $attendance->remarks }}
+                                                    </div>
+                                                @endif
+                                            @else
+                                                <input type="hidden"
+                                                    name="records[{{ $loop->index }}][attendance_date]"
+                                                    value="{{ \Carbon\Carbon::parse($attendance->attendance_date)->format('Y-m-d') }}">
+
+                                                <input type="hidden"
+                                                    name="records[{{ $loop->index }}][computed_ot_minutes]"
+                                                    value="{{ $attendance->computed_ot_minutes }}">
+
+                                                <select name="records[{{ $loop->index }}][ot_status]"
+                                                    class="form-select form-select-sm ot-status-select"
+                                                    data-computed-ot="{{ $attendance->computed_ot_minutes }}">
+                                                    <option value="pending" @selected($attendance->ot_status === 'pending')>
+                                                        Pending
+                                                    </option>
+                                                    <option value="approved" @selected($attendance->ot_status === 'approved')>
+                                                        Approved
+                                                    </option>
+                                                    <option value="rejected" @selected($attendance->ot_status === 'rejected')>
+                                                        Rejected
+                                                    </option>
+                                                </select>
+
+                                                <input type="hidden" class="approved-ot-hidden"
+                                                    name="records[{{ $loop->index }}][approved_ot_minutes]"
+                                                    value="{{ $attendance->ot_status === 'approved' ? $attendance->computed_ot_minutes : 0 }}">
+                                            @endif
                                         @else
                                             <span class="text-600">-</span>
                                         @endif
@@ -375,7 +513,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="12" class="text-center py-5">
+                                    <td colspan="14" class="text-center py-5">
                                         <h6 class="mb-1">No attendance records found</h6>
                                         <p class="text-muted mb-0">No attendance record for selected date range.</p>
                                     </td>
@@ -401,8 +539,14 @@
                                     </th>
 
                                     <th class="text-center text-success">
-                                        {{ readableTime(sprintf('%02d:%02d', floor($totalOtMinutes / 60), $totalOtMinutes % 60)) }}
+                                        {{ readableTime(sprintf('%02d:%02d', floor($totalComputedOtMinutes / 60), $totalComputedOtMinutes % 60)) }}
                                     </th>
+
+                                    <th class="text-center text-primary">
+                                        {{ readableTime(sprintf('%02d:%02d', floor($totalApprovedOtMinutes / 60), $totalApprovedOtMinutes % 60)) }}
+                                    </th>
+
+                                    <th></th>
 
                                     <th class="text-center text-danger">
                                         {{ readableTime(sprintf('%02d:%02d', floor($totalAbsentMinutes / 60), $totalAbsentMinutes % 60)) }}
@@ -415,6 +559,16 @@
                     </table>
                 </div>
             </div>
+
+            @if (!$employeeFinalized)
+                <div class="card-footer bg-light text-end">
+                    <button type="submit" class="btn btn-falcon-primary">
+                        <span class="fas fa-save me-1"></span>
+                        Save OT Approval
+                    </button>
+                </div>
+                </form>
+            @endif
         </div>
 
         {{-- Legend --}}
@@ -454,10 +608,10 @@
 
                     <div class="col-md-3">
                         <div class="d-flex align-items-center">
-                            <span class="fas fa-info-circle text-primary fs-2 me-3"></span>
+                            <span class="fas fa-check-circle text-primary fs-2 me-3"></span>
                             <div>
-                                <h6 class="mb-0 fw-bold">Note</h6>
-                                <small class="text-600">Holidays without logs are not marked absent.</small>
+                                <h6 class="mb-0 fw-bold">OT Approval</h6>
+                                <small class="text-600">Only approved OT is counted in payroll.</small>
                             </div>
                         </div>
                     </div>
@@ -511,5 +665,36 @@
         .card {
             border-radius: 0.45rem;
         }
+
+        .avatar-name {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .avatar-name span {
+            line-height: 1 !important;
+        }
+
+        .ot-status-select {
+            min-width: 140px;
+        }
     </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.ot-status-select').forEach(function(select) {
+                select.addEventListener('change', function() {
+                    const computedOt = this.dataset.computedOt || 0;
+                    const hiddenInput = this.closest('td').querySelector('.approved-ot-hidden');
+
+                    if (this.value === 'approved') {
+                        hiddenInput.value = computedOt;
+                    } else {
+                        hiddenInput.value = 0;
+                    }
+                });
+            });
+        });
+    </script>
 @endsection

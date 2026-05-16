@@ -207,7 +207,7 @@
                                 <th>Employee Name</th>
                                 <th>Department</th>
                                 <th>Position</th>
-                                <th class="text-center">Status</th>
+                                <th class="text-center">Timekeeping Status</th>
                                 <th class="text-center pe-3">Action</th>
                             </tr>
                         </thead>
@@ -237,14 +237,17 @@
                                     <td>{{ $employee->position ?? 'N/A' }}</td>
 
                                     <td class="text-center">
-                                        <span class="badge rounded-pill px-3 py-2"
-                                            style="background-color: #d1f7e5; color: #198754; font-weight: 600;">
-
-                                            <span class="fas fa-circle me-1"
-                                                style="font-size: 7px; color: #198754;"></span>
-
-                                            Active
-                                        </span>
+                                        @if (in_array($employee->id, $finalizedEmployeeIds))
+                                            <span class="badge rounded-pill badge-subtle-success text-success px-3 py-2">
+                                                <span class="fas fa-check-circle me-1"></span>
+                                                Finalized
+                                            </span>
+                                        @else
+                                            <span class="badge rounded-pill badge-subtle-warning text-warning px-3 py-2">
+                                                <span class="fas fa-clock me-1"></span>
+                                                Pending Review
+                                            </span>
+                                        @endif
                                     </td>
 
                                     <td class="text-center pe-3">
@@ -282,4 +285,21 @@
         </div>
 
     </div>
+
+
+    <style>
+        .avatar-name {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .avatar-name span {
+            line-height: 1 !important;
+        }
+
+        .ot-status-select {
+            min-width: 140px;
+        }
+    </style>
 @endsection
